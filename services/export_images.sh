@@ -6,53 +6,80 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-OUTPUT_DIR="${1:-$WORKSPACE_ROOT/exported_images}"
 
-DOCKER_CMD="docker"
-if ! docker ps >/dev/null 2>&1; then
-  if sg docker -c "docker ps" >/dev/null 2>&1; then
-    DOCKER_CMD='sg docker -c "docker'
-  else
-    DOCKER_CMD="sudo docker"
-  fi
+OUTPUT_DIR="$WORKSPACE_ROOT/exported_images"
+WITH_VLLM=false
+
+# Parse flags and arguments
+for arg in "$@"; do
+  case "$arg" in
+    --with-vllm)
+      WITH_VLLM=true
+      ;;
+    --help|-h)
+      echo "Usage: $0 [--with-vllm] [output_directory]"
+      exit 0
+      ;;
+    *)
+      if [[ "$arg" != -* ]]; then
+        OUTPUT_DIR="$arg"
+      fi
+      ;;
+  esac
+done
+
+if [ "${EXPORT_VLLM:-false}" = "true" ]; then
+  WITH_VLLM=true
 fi
+
+# Robust Docker execution helper
+run_docker() {
+  if docker ps >/dev/null 2>&1; then
+    docker "$@"
+  elif sg docker -c "docker ps" >/dev/null 2>&1; then
+    sg docker -c "docker $(printf '%q ' "$@")"
+  else
+    sudo docker "$@"
+  fi
+}
 
 mkdir -p "$OUTPUT_DIR"
 
 echo "============================================================================"
 echo "EXPORTING CODECHECKER DOCKER IMAGES FOR OFFLINE TRANSFER"
-echo "  • Output Directory: $OUTPUT_DIR"
+echo "  • Output Directory : $OUTPUT_DIR"
+echo "  • Include vLLM     : $WITH_VLLM"
 echo "============================================================================"
 
 # 1. Export Qdrant
 echo ""
 echo "[1/4] Exporting codechecker-qdrant:latest (~1.5 GB compressed)..."
-docker save codechecker-qdrant:latest | gzip > "$OUTPUT_DIR/codechecker-qdrant.tar.gz"
+run_docker save codechecker-qdrant:latest | gzip > "$OUTPUT_DIR/codechecker-qdrant.tar.gz"
 echo "  ✓ Saved: $OUTPUT_DIR/codechecker-qdrant.tar.gz"
 
 # 2. Export SCA
 echo ""
 echo "[2/4] Exporting codechecker-sca:latest (~300 MB compressed)..."
-docker save codechecker-sca:latest | gzip > "$OUTPUT_DIR/codechecker-sca.tar.gz"
+run_docker save codechecker-sca:latest | gzip > "$OUTPUT_DIR/codechecker-sca.tar.gz"
 echo "  ✓ Saved: $OUTPUT_DIR/codechecker-sca.tar.gz"
 
 # 3. Export SAST
 echo ""
 echo "[3/4] Exporting codechecker-sast:latest (~6.5 GB compressed)..."
-docker save codechecker-sast:latest | gzip > "$OUTPUT_DIR/codechecker-sast.tar.gz"
+run_docker save codechecker-sast:latest | gzip > "$OUTPUT_DIR/codechecker-sast.tar.gz"
 echo "  ✓ Saved: $OUTPUT_DIR/codechecker-sast.tar.gz"
 
 # 4. Export Web Cockpit UI
 echo ""
 echo "[4/4] Exporting codechecker-ui:latest (~250 MB compressed)..."
-docker save codechecker-ui:latest | gzip > "$OUTPUT_DIR/codechecker-ui.tar.gz"
+run_docker save codechecker-ui:latest | gzip > "$OUTPUT_DIR/codechecker-ui.tar.gz"
 echo "  ✓ Saved: $OUTPUT_DIR/codechecker-ui.tar.gz"
 
 # 5. Optional Export: vLLM Inference Engine (GPU)
-if [ "${EXPORT_VLLM:-false}" = "true" ] || [ "$1" = "--with-vllm" ] || [ "$2" = "--with-vllm" ]; then
+if [ "$WITH_VLLM" = "true" ]; then
   echo ""
   echo "[5/5] Exporting vllm/vllm-openai:v0.20.1 (~8 GB compressed)..."
-  docker save vllm/vllm-openai:v0.20.1 | gzip > "$OUTPUT_DIR/vllm-openai.tar.gz"
+  run_docker save vllm/vllm-openai:v0.20.1 | gzip > "$OUTPUT_DIR/vllm-openai.tar.gz"
   echo "  ✓ Saved: $OUTPUT_DIR/vllm-openai.tar.gz"
 fi
 
@@ -76,7 +103,11 @@ set -e
 
 DOCKER_CMD="docker"
 if ! docker ps >/dev/null 2>&1; then
-  DOCKER_CMD="sudo docker"
+  if sg docker -c "docker ps" >/dev/null 2>&1; then
+    DOCKER_CMD='sg docker -c "docker'
+  else
+    DOCKER_CMD="sudo docker"
+  fi
 fi
 
 echo "Loading Codechecker Docker images from offline archives..."
@@ -106,5 +137,5 @@ echo "To deploy on another machine:"
 echo "  1. Copy the '$OUTPUT_DIR' folder to the new system."
 echo "  2. On the new system, run:"
 echo "       cd $(basename "$OUTPUT_DIR")"
-echo "       sudo ./load_and_run.sh"
+echo "       ./load_and_run.sh"
 echo "============================================================================"
