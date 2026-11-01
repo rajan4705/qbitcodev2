@@ -48,7 +48,15 @@ echo "[4/4] Exporting codechecker-ui:latest (~250 MB compressed)..."
 docker save codechecker-ui:latest | gzip > "$OUTPUT_DIR/codechecker-ui.tar.gz"
 echo "  ✓ Saved: $OUTPUT_DIR/codechecker-ui.tar.gz"
 
-# 5. Copy management scripts
+# 5. Optional Export: vLLM Inference Engine (GPU)
+if [ "${EXPORT_VLLM:-false}" = "true" ] || [ "$1" = "--with-vllm" ] || [ "$2" = "--with-vllm" ]; then
+  echo ""
+  echo "[5/5] Exporting vllm/vllm-openai:v0.20.1 (~8 GB compressed)..."
+  docker save vllm/vllm-openai:v0.20.1 | gzip > "$OUTPUT_DIR/vllm-openai.tar.gz"
+  echo "  ✓ Saved: $OUTPUT_DIR/vllm-openai.tar.gz"
+fi
+
+# 6. Copy management scripts
 echo ""
 echo "Copying deployment scripts into $OUTPUT_DIR..."
 cp "$SCRIPT_DIR/deploy.sh" "$OUTPUT_DIR/"
@@ -77,6 +85,10 @@ gunzip -c codechecker-sca.tar.gz    | $DOCKER_CMD load
 gunzip -c codechecker-sast.tar.gz   | $DOCKER_CMD load
 if [ -f codechecker-ui.tar.gz ]; then
   gunzip -c codechecker-ui.tar.gz   | $DOCKER_CMD load
+fi
+if [ -f vllm-openai.tar.gz ]; then
+  echo "Loading vllm-openai.tar.gz..."
+  gunzip -c vllm-openai.tar.gz      | $DOCKER_CMD load
 fi
 
 echo "✓ All container images loaded successfully!"

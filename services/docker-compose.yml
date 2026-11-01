@@ -105,7 +105,7 @@ services:
       - OCR_PATH=/usr/local/bin/ocr
       - QBIT_ENRICHER_URL=http://sast-api:8080
       - SCA_URL=http://sca-api:8082
-      - VLLM_URL=http://host.docker.internal:8000/v1
+      - VLLM_URL=http://${VLLM_HOST:-host.docker.internal}:8000/v1
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -113,6 +113,47 @@ services:
         condition: service_healthy
       sca-api:
         condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # 5. vLLM Inference Engine (GPU) – Activated via --profile vllm
+  #    Change models dynamically with:
+  #      MODEL_PATH=/path/to/weights MODEL_NAME=my-model docker compose --profile vllm up -d
+  # ---------------------------------------------------------------------------
+  vllm:
+    profiles: ["vllm"]
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:v0.20.1}
+    container_name: codechecker-vllm
+    restart: unless-stopped
+    ports:
+      - "${VLLM_PORT:-8000}:8000"
+    volumes:
+      - ${MODEL_PATH:-../models/qwen2.5-coder-14b-instruct}:/model:ro
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+    command: >
+      serve /model
+      --served-model-name ${MODEL_NAME:-qwen2.5-coder-14b-instruct}
+      --port 8000
+      --max-model-len ${MAX_MODEL_LEN:-32768}
+      --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.85}
+      --enable-auto-tool-choice
+      --tool-call-parser hermes
+      --trust-remote-code
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ipc: host
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
 networks:
   default:

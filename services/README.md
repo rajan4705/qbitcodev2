@@ -14,6 +14,7 @@ All models, vector indices, vulnerability databases, and dependencies are baked 
 | **SAST Engine** | `codechecker-sast` | `8080` (Web UI & REST) | CWE/CVE Threat Attribution & Jina 1.5B | GPU (CUDA 13.0) |
 | **SCA Engine** | `codechecker-sca` | `8082` (Web UI & REST) | 13-Language Dependency Scanner & OSV DB | CPU |
 | **Web Cockpit** | `codechecker-ui` | `5433` (maps to `5432`) | Cyberpunk Web Cockpit GUI & Review Orchestrator | CPU |
+| **vLLM Engine** | `codechecker-vllm` | `8000` (OpenAI API) | Optional LLM Inference container (`--profile vllm`) | GPU (CUDA 13.0) |
 
 ---
 
@@ -83,6 +84,25 @@ sudo docker compose restart sast-api
 
 # Stop all services
 sudo docker compose down
+```
+
+---
+
+## Changing Models & Running vLLM in Docker
+
+The vLLM inference container uses volume mounting so you can switch models at any time **without rebuilding images**:
+
+### 1. Run with Default Qwen 14B Model:
+```bash
+docker compose -f services/docker-compose.yml --profile vllm up -d
+```
+
+### 2. Switch to Any Custom or Quantized Model:
+Place your model folder inside `models/` (or any path) and specify the path and name:
+```bash
+MODEL_PATH=./models/qwen2.5-coder-7b-instruct \
+MODEL_NAME=qwen2.5-coder-7b-instruct \
+docker compose -f services/docker-compose.yml --profile vllm up -d
 ```
 
 ---
