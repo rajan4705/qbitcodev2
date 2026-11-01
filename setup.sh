@@ -108,7 +108,11 @@ echo ""
 echo "[5/6] Checking Docker Microservices..."
 if curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1 && curl -sf http://127.0.0.1:8082/health >/dev/null 2>&1; then
   echo "    ✓ Microservices (:8080, :8082, :6333) are already online!"
-elif command -v docker >/dev/null 2>&1; then
+else
+  if [ ! -f "services/services/sca/vulnerabilities.db" ]; then
+    echo "    Threat databases missing. Downloading from Hugging Face dataset (saad0503/qbitcode-dbs)..."
+    bash scripts/download_databases.sh || true
+  fi
   COMPOSE_FILE="services/docker-compose.yml"
   if [ ! -f "$COMPOSE_FILE" ]; then
     COMPOSE_FILE="docker/docker-compose.yml"
@@ -117,8 +121,6 @@ elif command -v docker >/dev/null 2>&1; then
     echo "    Starting Qdrant, SAST, and SCA microservices ($COMPOSE_FILE)..."
     docker compose -f "$COMPOSE_FILE" up -d 2>/dev/null || sudo -n docker compose -f "$COMPOSE_FILE" up -d 2>/dev/null || true
   fi
-else
-  echo "    ⚠️ Docker not installed. Microservices can be started manually when ready."
 fi
 
 # 7. Symlink 'qbitcode' Orchestrator
@@ -126,6 +128,8 @@ echo ""
 echo "[6/6] Linking Master 'qbitcode' Orchestrator..."
 chmod +x scripts/qbitcode
 chmod +x scripts/download_models.sh
+chmod +x scripts/download_databases.sh
+chmod +x scripts/launch_services.sh
 ln -sf "$SCRIPT_DIR/scripts/qbitcode" "$HOME/.local/bin/qbitcode"
 echo "    ✓ Linked Master Command: $HOME/.local/bin/qbitcode"
 
@@ -135,9 +139,12 @@ echo "🎉 SETUP COMPLETE!"
 echo "========================================================================"
 echo ""
 echo "Next steps:"
-echo "  1. Download the AI model (if not already downloaded):"
+echo "  1. Download threat databases (if not already installed):"
+echo "       ./scripts/download_databases.sh"
+echo ""
+echo "  2. Download the AI model (if not already downloaded):"
 echo "       ./scripts/download_models.sh 14b"
 echo ""
-echo "  2. Launch the entire autonomous pipeline anytime with one command:"
+echo "  3. Launch the entire autonomous pipeline anytime with one command:"
 echo "       qbitcode"
 echo "========================================================================"

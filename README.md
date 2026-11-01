@@ -114,27 +114,27 @@ qbit scan --format sarif --output scan.sarif
 
 ---
 
-## 💾 Setting Up Databases on a New Server
+## 💾 Threat Intelligence & Database Setup
 
-The Qdrant Vector DB (`:6333`) and SCA SQLite Database (`:8082`) contain pre-indexed threat intelligence:
-* **SCA database (`osv_all.sqlite`)**: ~429 MB
-* **SAST / CVE threat model**: ~1.7 GB
-* **Total size**: **~2.1 GB** (compresses to **~900 MB** as a `.tar.gz`).
+The platform uses pre-indexed threat intelligence databases hosted publicly on Hugging Face:
+* **Hugging Face Dataset**: [**saad0503/qbitcode-dbs**](https://huggingface.co/datasets/saad0503/qbitcode-dbs)
+* **SCA Vulnerability DB** (`vulnerabilities.db`): ~33 MB compressed (~138 MB uncompressed) — 185k+ OSV advisories across 13 languages.
+* **Qdrant Vector DB** (`qdrant_storage.tar.gz`): ~760 MB compressed (~3.3 GB uncompressed) — 206k pre-embedded CWE/CVE vectors.
+* **SAST NVD Index** (`sast_nvd_index.zip`): ~1.2 MB compressed (~9.6 MB uncompressed).
+* **SAST Embedding Model**: Official [**jinaai/jina-code-embeddings-1.5b**](https://huggingface.co/jinaai/jina-code-embeddings-1.5b) on Hugging Face.
 
-### Free Hosting Options:
-1. **Kaggle Dataset or Hugging Face Hub (Recommended)**:
-   * Upload `services/services/` as a Kaggle dataset or Hugging Face repository release.
-   * On any new server, run:
-     ```bash
-     wget -O codechecker_dbs.tar.gz "<YOUR_KAGGLE_OR_HF_DIRECT_URL>"
-     tar -xzf codechecker_dbs.tar.gz -C services/
-     docker compose -f services/docker-compose.yml up -d
-     ```
-2. **Direct Server-to-Server SCP Transfer**:
-   ```bash
-   tar -czf codechecker_dbs.tar.gz -C services/ services/
-   scp codechecker_dbs.tar.gz user@new-server:/path/to/qbitcode/services/
-   ```
+### 🚀 One-Command Database Downloader:
+On any fresh clone or new server, run:
+```bash
+./scripts/download_databases.sh
+```
+This automatically downloads all pre-indexed databases from `saad0503/qbitcode-dbs` and pulls the official Jina 1.5B checkpoint.
+
+### ⚡ Easy Microservices Launcher:
+Launch and verify all three security services (:6333 Qdrant, :8080 SAST, :8082 SCA):
+```bash
+./scripts/launch_services.sh
+```
 
 ---
 
@@ -153,4 +153,4 @@ The Qdrant Vector DB (`:6333`) and SCA SQLite Database (`:8082`) contain pre-ind
 ---
 
 ## 📄 License
-Apache 2.0 License. See [LICENSE](LICENSE) for details.
+GNU General Public License v3.0 (GPL-3.0). See [LICENSE](LICENSE) for details.

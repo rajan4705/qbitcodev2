@@ -30,13 +30,16 @@ echo "Target Workspace: $TARGET_DIR"
 echo ""
 echo "[1/4] Checking Microservices (:6333 Qdrant, :8080 SAST, :8082 SCA)..."
 if ! curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1 || ! curl -sf http://127.0.0.1:8082/health >/dev/null 2>&1; then
-  echo "Services offline. Starting Docker containers..."
-  COMPOSE_FILE="$BASE_DIR/services/docker-compose.yml"
-  if [ ! -f "$COMPOSE_FILE" ]; then
-    COMPOSE_FILE="$BASE_DIR/docker/docker-compose.yml"
+  echo "Services offline. Launching security microservices..."
+  if [ -f "$BASE_DIR/scripts/launch_services.sh" ]; then
+    bash "$BASE_DIR/scripts/launch_services.sh"
+  else
+    COMPOSE_FILE="$BASE_DIR/services/docker-compose.yml"
+    if [ ! -f "$COMPOSE_FILE" ]; then
+      COMPOSE_FILE="$BASE_DIR/docker/docker-compose.yml"
+    fi
+    docker compose -f "$COMPOSE_FILE" up -d 2>/dev/null || true
   fi
-  docker compose -f "$COMPOSE_FILE" up -d 2>/dev/null || true
-  sleep 2
 else
   echo "✓ Microservices (:8080, :8082, :6333) are already online!"
 fi

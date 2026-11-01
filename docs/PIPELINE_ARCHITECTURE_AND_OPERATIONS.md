@@ -215,24 +215,37 @@ tar -xzvf qbit_pipeline_core.tar.gz -C /opt/
 
 We have created two master scripts in `scripts/`:
 
-### A. One-Time Setup & Build Script: `scripts/deploy_complete_pipeline.sh`
+### A. One-Time Setup & Build Script: `setup.sh`
 ```bash
-/home/minakshi.katoch/Desktop/qbitcode/scripts/deploy_complete_pipeline.sh
+./setup.sh
 ```
 **Actions Performed**:
-1. Verifies Node.js, Docker, and NVIDIA GPU runtimes.
-2. Installs npm packages and builds the React Web Cockpit bundle into `ui/dist`.
-3. Creates symlinks for `qbit` and `qbitcode` in `~/.local/bin/`.
-4. Starts the Docker containers (`docker-compose.yml` for ports 6333, 8080, and 8082).
-5. Initiates the default vLLM model engine on port 8000.
+1. Verifies Python/Conda, Go, Bun, Node.js, and Docker runtimes.
+2. Compiles Go Code Review Engine (`ocr`) to `~/.local/bin/ocr`.
+3. Builds OpenCode Terminal TUI single binary into `~/.local/bin/opencode`.
+4. Compiles Cyberpunk React Web Cockpit frontend and links `~/.local/bin/qbit`.
+5. Verifies or downloads pre-indexed databases from Hugging Face dataset [`saad0503/qbitcode-dbs`](https://huggingface.co/datasets/saad0503/qbitcode-dbs).
+6. Symlinks master `qbitcode` runner into `~/.local/bin/qbitcode`.
 
-### B. Master Daily Runner: `qbitcode`
+### B. Standalone Database Downloader: `scripts/download_databases.sh`
+```bash
+./scripts/download_databases.sh
+```
+Pulls pre-indexed threat intelligence directly from the public Hugging Face dataset [saad0503/qbitcode-dbs](https://huggingface.co/datasets/saad0503/qbitcode-dbs) (SCA SQLite DB, Qdrant vectors, NVD index) and the official [jinaai/jina-code-embeddings-1.5b](https://huggingface.co/jinaai/jina-code-embeddings-1.5b) model checkpoint.
+
+### C. Standalone Microservices Launcher: `scripts/launch_services.sh`
+```bash
+./scripts/launch_services.sh
+```
+Starts and runs the 7-point health check suite against ports 6333 (Qdrant), 8080 (SAST), and 8082 (SCA).
+
+### D. Master Daily Runner: `qbitcode`
 Simply run:
 ```bash
 qbitcode [optional_target_directory]
 ```
 **Boot Sequence Orchestration**:
-1. Checks health on ports 8080 (SAST) and 8082 (SCA); boots Docker containers if down.
+1. Checks health on ports 8080 (SAST) and 8082 (SCA); boots microservices via `launch_services.sh` if down.
 2. Checks health on port 8000 (vLLM); boots `qwen2.5-coder-14b-instruct` in a persistent screen daemon if down.
 3. Starts the Qbit Web Cockpit server on port 5432.
 4. Drops you directly into the interactive OpenCode TUI in your target repository.
