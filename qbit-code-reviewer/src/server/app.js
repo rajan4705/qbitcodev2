@@ -172,10 +172,28 @@ export function createApp() {
       total: currentFindings.length
     });
 
-    // Asynchronously enrich missing CWE/CVE in background without blocking response
-    const needsEnrichment = currentFindings.filter(f => !f.cwe_id || f.cwe_id === 'N/A' || f.cwe_id === 'NONE');
+    // Asynchronously enrich missing CWE/CVE in background and persist results to cache
+    const needsEnrichment = currentFindings.filter(f => 
+      !f.cwe_id || f.cwe_id === 'N/A' || f.cwe_id === 'NONE' ||
+      !f.cve_id || f.cve_id === 'N/A'
+    );
     if (needsEnrichment.length > 0) {
-      enrichFindings(needsEnrichment.slice(0, 50), { timeoutMs: 2000 }).catch(() => {});
+      (async () => {
+        try {
+          await enrichFindings(needsEnrichment.slice(0, 50), { timeoutMs: 8000, concurrency: 4 });
+          for (const f of needsEnrichment) {
+            if (cache.data.findings[f.id]) {
+              cache.data.findings[f.id].cwe_id = f.cwe_id;
+              cache.data.findings[f.id].cwe_title = f.cwe_title;
+              cache.data.findings[f.id].cve_id = f.cve_id;
+              cache.data.findings[f.id].ref_cve_id = f.ref_cve_id;
+              cache.data.findings[f.id].ref_cwe_id = f.ref_cwe_id;
+              cache.data.findings[f.id].nvd_severity = f.nvd_severity;
+            }
+          }
+          cache.save();
+        } catch {}
+      })().catch(() => {});
     }
   });
 

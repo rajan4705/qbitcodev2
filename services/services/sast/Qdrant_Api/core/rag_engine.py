@@ -170,7 +170,32 @@ class RAGEngine:
         except Exception:
             pass
 
-        # 2. Seamless fallback to local embedded storage
+        # 2. Fast zero-memory memory-mapped vector index fallback
+        fast_vec = Path(config.STORAGE_DIR) / "vectors.f16.npy"
+        fast_meta = Path(config.STORAGE_DIR) / "metadata.json.gz"
+        if fast_vec.exists() and fast_meta.exists():
+            try:
+                import gzip, json, numpy as np
+                print(f"  Loading fast memory-mapped vector index from {fast_vec}...")
+                self._local_norm_vecs = np.load(str(fast_vec), mmap_mode="r")
+                with gzip.open(str(fast_meta), "rt", encoding="utf-8") as f:
+                    self._local_payloads = json.load(f)
+                self._local_ids_inv = [m.get("id") for m in self._local_payloads]
+                lang_buckets = {}
+                for idx, p in enumerate(self._local_payloads):
+                    l = p.get("language")
+                    if l:
+                        lang_buckets.setdefault(l, []).append(idx)
+                self._local_lang_indices = {k: np.asarray(v, dtype=np.int32) for k, v in lang_buckets.items()}
+                self._local_all_indices = np.arange(len(self._local_norm_vecs), dtype=np.int32)
+                self._local_fast_ready = True
+                self.collection_name = "vulnerability_dataset"
+                print(f"✓ Fast memory-mapped index ready ({len(self._local_norm_vecs):,} vectors, {len(self._local_lang_indices)} languages, ~20MB RAM)")
+                return True
+            except Exception as e:
+                print(f"⚠️  Fast mmap index load error: {e}")
+
+        # 3. Fallback to local embedded storage
         if Path(config.STORAGE_DIR).exists():
             try:
                 print(f"  Connecting to local embedded Qdrant storage at {config.STORAGE_DIR}...")
@@ -302,7 +327,8 @@ class RAGEngine:
             return []
         if sub_vecs is None:
             sub_vecs = self._local_norm_vecs[indices]
-        scores = np.dot(sub_vecs, q_norm_vec)
+        q_vec = q_norm_vec.astype(sub_vecs.dtype) if hasattr(q_norm_vec, 'astype') else q_norm_vec
+        scores = np.dot(sub_vecs, q_vec).astype(np.float32)
         k = min(limit, len(scores))
         if len(scores) > k:
             top_rel = np.argpartition(scores, -k)[-k:]
@@ -325,9 +351,6 @@ class RAGEngine:
 
     def query_qdrant(self, query_vector: List[float], language: str, limit: int = 20) -> List:
         """Query Qdrant with language filtering, falling back to cross-language if sparse."""
-        if self.client is None:
-            return []
-
         if self._local_fast_ready:
             try:
                 import numpy as np
@@ -336,9 +359,9 @@ class RAGEngine:
                 q = q / (q_norm if q_norm != 0.0 else 1.1920929e-7)
 
                 lang_idxs = self._local_lang_indices.get(language)
-                lang_vecs = self._local_lang_vecs.get(language)
+                lang_vecs = self._local_lang_vecs.get(language) if self._local_lang_vecs else None
                 lang_results = self._top_scored_points_from_indices(q, lang_idxs, limit=limit, sub_vecs=lang_vecs)
-                if len(lang_results) >= config.MIN_LANG_MATCHES:
+                if len(lang_results) >= getattr(config, "MIN_LANG_MATCHES", 1):
                     return lang_results
 
                 all_results = self._top_scored_points_from_indices(q, self._local_all_indices, limit=limit)
@@ -351,6 +374,9 @@ class RAGEngine:
                 return combined[:limit]
             except Exception as e:
                 print(f"Fast index query fallback ({e})")
+
+        if self.client is None:
+            return []
 
         try:
             # 1. Language-filtered query

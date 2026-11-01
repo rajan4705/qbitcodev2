@@ -112,7 +112,7 @@ export async function handleScan(targetPath, options = {}) {
         // Enrich findings with reference CWE-ID & CVE-ID from localhost:8080
         if (shouldEnrich && finalFindings.length > 0) {
           process.stdout.write(chalk.dim('\n⏳ Enriching findings with MITRE CWE & CVE attributions...\n'));
-          await enrichFindings(finalFindings, { timeoutMs: 2000 });
+          await enrichFindings(finalFindings, { timeoutMs: 8000 });
         }
 
         // Synthesize full inline patches if requested
@@ -265,7 +265,7 @@ export async function handleScan(targetPath, options = {}) {
         process.stdout.write('\r\x1b[K');
         process.stdout.write(chalk.dim('⏳ Fetching reference MITRE CWE & CVE attributions...\r'));
       }
-      await enrichFindings(result.findings, { timeoutMs: 2000 });
+      await enrichFindings(result.findings, { timeoutMs: 8000 });
     }
 
     // Synthesize code patches if requested

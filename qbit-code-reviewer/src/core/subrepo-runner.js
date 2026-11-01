@@ -292,7 +292,7 @@ export async function runSubrepoBatchScan({
         onProgress(`⚡ [BACKGROUND ENRICHMENT & REMEDIATION] Offloading CWE/CVE indexing & patch synthesis for ${res.findings.length} findings to background worker...\n`);
         (async () => {
           try {
-            await enrichFindings(res.findings, { timeoutMs: 1500 });
+            await enrichFindings(res.findings, { timeoutMs: 8000 });
             await synthesizeAllPatches(res.findings, root, (current, total) => {
               onProgress(`[Background Synthesizer: ${sub.name}] Patch synthesis: ${current}/${total}\r`);
             });
