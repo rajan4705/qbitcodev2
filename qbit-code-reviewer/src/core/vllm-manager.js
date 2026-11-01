@@ -12,15 +12,19 @@ const MODELS_BASE = process.env.MODELS_DIR || (
 );
 const PORT = parseInt(process.env.VLLM_PORT || '8000', 10);
 
+const awq7bPath = path.join(MODELS_BASE, 'qwen2.5-coder-7b-instruct-awq');
+const standard7bPath = path.join(MODELS_BASE, 'qwen2.5-coder-7b-instruct');
+const resolved7bPath = fs.existsSync(awq7bPath) ? awq7bPath : standard7bPath;
+
 export const MODEL_PROFILES = {
   '7b': {
     id: '7b',
     name: 'Qwen2.5-Coder-7B-Instruct',
     servedModelName: 'qwen2.5-coder-7b-instruct',
-    path: path.join(MODELS_BASE, 'qwen2.5-coder-7b-instruct'),
+    path: resolved7bPath,
     toolCallParser: 'hermes',
-    maxModelLen: 32768,
-    gpuMemoryUtilization: 0.65,
+    maxModelLen: 8192,
+    gpuMemoryUtilization: 0.60,
     kvCacheDtype: 'auto',
     recommendedConcurrency: 8,
     badge: 'LIGHTWEIGHT RUNNER (8x)',

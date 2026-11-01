@@ -14,25 +14,63 @@ import { enrichFindings } from './cve-enricher.js';
  * and recovers partial findings on crash or non-zero exit.
  */
 export async function runOcrCommand(subcommand, args = [], cwd = process.cwd(), timeoutMs = 0, onProgress = null) {
-  // Fast check if vLLM is reachable when using vllm provider
+  // Fast check if vLLM is reachable across Docker network or host
+  let vllmBase = (config.vllmUrl || 'http://127.0.0.1:8000').replace(/\/v1\/?$/, '');
   let vllmOnline = false;
-  try {
-    const healthUrl = `${config.vllmUrl.replace('/v1', '')}/health`;
-    const res = await fetch(healthUrl, { signal: AbortSignal.timeout(2000) });
-    vllmOnline = res.ok;
-  } catch {}
+
+  const candidateBases = [
+    vllmBase,
+    'http://codechecker-vllm:8000',
+    'http://vllm:8000',
+    'http://host.docker.internal:8000',
+    'http://127.0.0.1:8000'
+  ];
+
+  for (const candidate of [...new Set(candidateBases)]) {
+    try {
+      const res = await fetch(`${candidate}/health`, { signal: AbortSignal.timeout(1500) });
+      if (res.ok) {
+        vllmOnline = true;
+        vllmBase = candidate;
+        break;
+      }
+    } catch {}
+  }
 
   if (!vllmOnline && !process.env.FORCE_OCR) {
     return {
       status: 'error',
-      error: `vLLM server is offline (${config.vllmUrl}). Please ensure vLLM is running.`,
+      error: `vLLM server is offline (${vllmBase}). Please ensure vLLM is running.`,
       summary: summarizeFindings([]),
       findings: []
     };
   }
 
+  let activeServedModel = config.model;
+  try {
+    const mRes = await fetch(`${vllmBase}/v1/models`, { signal: AbortSignal.timeout(1200) });
+    if (mRes.ok) {
+      const mData = await mRes.json();
+      if (mData?.data?.[0]?.id) {
+        activeServedModel = mData.data[0].id;
+      }
+    }
+  } catch {}
+  if (!activeServedModel) {
+    activeServedModel = 'qwen2.5-coder-7b-instruct';
+  }
+
   const tmpFile = path.join(os.tmpdir(), `qbit-ocr-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
-  const fullArgs = [subcommand, ...args, '--format', 'json', '--output', tmpFile];
+  // Ensure the model argument matches the actively served vLLM model
+  const modelIdx = args.indexOf('--model');
+  let sanitizedArgs = [...args];
+  if (modelIdx !== -1 && sanitizedArgs[modelIdx + 1]) {
+    sanitizedArgs[modelIdx + 1] = activeServedModel;
+  } else {
+    sanitizedArgs.push('--model', activeServedModel);
+  }
+
+  const fullArgs = [subcommand, ...sanitizedArgs, '--format', 'json', '--output', tmpFile];
 
   // Check if an explicit --resume flag was passed in args
   let currentSessionId = null;
@@ -50,6 +88,11 @@ export async function runOcrCommand(subcommand, args = [], cwd = process.cwd(), 
       cwd,
       env: {
         ...process.env,
+        OCR_LLM_URL: vllmBase,
+        OCR_LLM_TOKEN: config.apiKey || 'token',
+        OCR_LLM_MODEL: activeServedModel,
+        OPENAI_BASE_URL: vllmBase,
+        OPENAI_API_KEY: config.apiKey || 'token',
         PATH: `${path.dirname(config.ocrPath)}:${process.env.PATH || ''}`
       }
     });
@@ -250,7 +293,7 @@ export async function runScan({ targetDir = process.cwd(), pathFilter = '', excl
   const activeConcurrency = String(concurrency || config.concurrency || (config.model && config.model.includes('14b') ? 8 : 4));
   const activeModel = config.model || (parseInt(activeConcurrency, 10) >= 8 ? 'qwen2.5-coder-14b-instruct' : 'qwen3-coder-30b-a3b-instruct');
 
-  const args = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '8'];
+  const args = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '8', '--max-tokens', '8192'];
   if (activeModel) {
     args.push('--model', activeModel);
   }
@@ -274,7 +317,7 @@ export async function runScan({ targetDir = process.cwd(), pathFilter = '', excl
     if (typeof onProgress === 'function') {
       onProgress(`⚠️ Previous session scope did not match current scan. Starting fresh scan without checkpoint...\n`);
     }
-    const cleanArgs = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '8'];
+    const cleanArgs = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '8', '--max-tokens', '8192'];
     if (activeModel) {
       cleanArgs.push('--model', activeModel);
     }

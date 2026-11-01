@@ -478,6 +478,7 @@ export class ScanJobRegistry extends EventEmitter {
         job.status = 'failed';
         job.error = result.error;
         job.completedAt = Date.now();
+        this.emitToJob(job, 'log', { message: `❌ [SCAN ERROR] ${result.error}` });
         this.emitToJob(job, 'error', { error: result.error });
       } else if (result.status === 'interrupted') {
         job.status = 'interrupted';

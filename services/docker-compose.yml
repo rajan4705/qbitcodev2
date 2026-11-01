@@ -112,8 +112,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      sast-api:
-        condition: service_healthy
       sca-api:
         condition: service_healthy
 
@@ -130,7 +128,7 @@ services:
     ports:
       - "${VLLM_PORT:-8000}:8000"
     volumes:
-      - ${MODEL_PATH:-../models/qwen2.5-coder-7b-instruct}:/model:ro
+      - ${MODEL_PATH:-../models/qwen2.5-coder-7b-instruct-awq}:/model:ro
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - CUDA_VISIBLE_DEVICES=0
@@ -139,7 +137,8 @@ services:
       --served-model-name ${MODEL_NAME:-qwen2.5-coder-7b-instruct}
       --port 8000
       --max-model-len ${MAX_MODEL_LEN:-32768}
-      --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.65}
+      --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.75}
+      --enforce-eager
       --enable-auto-tool-choice
       --tool-call-parser hermes
       --trust-remote-code

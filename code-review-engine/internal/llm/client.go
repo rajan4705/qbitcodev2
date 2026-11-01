@@ -362,7 +362,19 @@ func (r *ChatResponse) ToolCalls() []ToolCall {
 	if len(r.Choices) == 0 {
 		return nil
 	}
-	return r.Choices[0].Message.ToolCalls
+	if len(r.Choices[0].Message.ToolCalls) > 0 {
+		return r.Choices[0].Message.ToolCalls
+	}
+	// Fallback: extract narrated tool calls from text content
+	content := r.VisibleContent()
+	if content != "" {
+		fallbackCalls := ExtractFallbackToolCalls(content)
+		if len(fallbackCalls) > 0 {
+			r.Choices[0].Message.ToolCalls = fallbackCalls
+			return fallbackCalls
+		}
+	}
+	return nil
 }
 
 // ReasoningContent extracts the reasoning content of the first choice, if any.
