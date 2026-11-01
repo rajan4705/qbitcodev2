@@ -134,6 +134,8 @@ services:
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - CUDA_VISIBLE_DEVICES=0
+      - HF_HUB_OFFLINE=1
+      - TRANSFORMERS_OFFLINE=1
     command: >
       /model
       --served-model-name ${MODEL_NAME:-qwen2.5-coder-7b-instruct}
