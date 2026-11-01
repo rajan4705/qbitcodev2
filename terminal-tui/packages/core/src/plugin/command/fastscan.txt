@@ -1,0 +1,21 @@
+You are Qbit FastScan, an autonomous security scan accelerator and workspace exemption specialist.
+
+Target Directory to Analyze: $ARGUMENTS
+
+---
+
+## Instructions
+
+1. Analyze the project directory and all subdirectories to discover non-code, generated, or third-party folders and files that can be exempted from vulnerability scanning.
+2. Identify and categorize exemptions:
+   - **Dependencies**: `node_modules`, `vendor`, `bower_components`, `Pods`, `Carthage`, `.pnpm-store`, `.yarn`
+   - **Build Artifacts**: `dist`, `build`, `out`, `target`, `bin`, `obj`, `.next`, `.nuxt`, `.turbo`, `coverage`
+   - **Version Control & IDE**: `.git`, `.vscode`, `.idea`, `.zed`, `.husky`
+   - **Virtualenvs & Caches**: `venv`, `.venv`, `__pycache__`, `.pytest_cache`, `.mypy_cache`
+   - **Lock Files**: `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, `Cargo.lock`, `flake.lock`
+   - **Binaries & Media**: images, videos, audio, compressed archives (`.zip`, `.tar`), compiled binaries (`.so`, `.dll`, `.exe`, `.bin`), fonts, documents
+   - **Minified Code**: `*.min.js`, `*.min.css`, `*.map`, `*.bundle.js`
+   - **Test Fixtures & Mocks**: `testdata`, `fixtures`, `__snapshots__`, `mocks`
+3. Return the comprehensive structured list of exempted folders and files with categories, file counts, and reasons.
+4. Save the configuration to `.qbit/scan_exemptions.json` and `.scanignore` containing the optimal exclude patterns.
+5. Update the scan command so that subsequent `/scan` runs automatically use the exempted files and folders.

@@ -1,0 +1,103 @@
+# =============================================================================
+# Container 2: SAST CWE/CVE Threat Attribution Engine – Port 8080
+#
+# Standalone – everything baked in:
+#   • Jina Code Embeddings 1.5B model (2.9 GB) – no internet download
+#   • NVD index JSON (9.6 MB)
+#   • All source code
+#   • All Python dependencies pinned to exact versions
+#
+# GPU accelerated (NVIDIA CUDA 13.0). Falls back to CPU if no GPU present.
+# =============================================================================
+
+FROM pytorch/pytorch:2.13.0-cuda13.0-cudnn9-runtime
+
+# ── Environment ──────────────────────────────────────────────────────────────
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    # Tell HuggingFace/Transformers to never hit the internet
+    TRANSFORMERS_OFFLINE=1 \
+    HF_HUB_OFFLINE=1 \
+    HF_DATASETS_OFFLINE=1 \
+    # PyTorch CUDA memory tuning
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+    # Activate the venv for every RUN / CMD
+    PATH="/opt/venv/bin:$PATH" \
+    # Qdrant connection (resolved by docker-compose service name)
+    QDRANT_HOST=qdrant \
+    QDRANT_PORT=6333 \
+    # Internal model + data paths (baked in)
+    EMBED_MODEL_PATH=/app/models/jina-code-embeddings-1.5b \
+    NVD_INDEX_PATH=/app/data/nvd_index.json \
+    STORAGE_DIR=/app/qdrant_storage \
+    PYTHONPATH=/app:/app/Qdrant_Api
+
+# ── OS packages ──────────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+        python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Virtual environment ───────────────────────────────────────────────────────
+# --system-site-packages lets venv inherit the pre-installed CUDA-linked
+# PyTorch from the base image, avoiding a 2+ GB re-download.
+RUN python3 -m venv /opt/venv --system-site-packages
+
+# ── Python dependencies (exact versions, offline-safe) ───────────────────────
+RUN pip install --no-cache-dir \
+    fastapi==0.136.3 \
+    uvicorn[standard]==0.52.4 \
+    pydantic==2.13.4 \
+    python-multipart==0.0.32 \
+    qdrant-client==1.19.0 \
+    sentence-transformers==6.0.0 \
+    transformers==5.16.1 \
+    accelerate==1.14.0 \
+    einops==0.8.2 \
+    sentencepiece==0.2.2 \
+    tokenizers==0.23.1 \
+    safetensors==0.8.0 \
+    huggingface_hub==1.28.0 \
+    numpy==2.2.6 \
+    tqdm==4.70.0 \
+    requests==2.34.2
+
+WORKDIR /app
+
+# ── Application source code ───────────────────────────────────────────────────
+COPY API_qdrant_Vul_db/Qdrant_Api /app/Qdrant_Api
+
+# ── Baked-in model and data files ────────────────────────────────────────────
+# Jina Code Embeddings 1.5B (~2.9 GB) – copied directly into the image
+COPY Project/models/jina-code-embeddings-1.5b /app/models/jina-code-embeddings-1.5b
+
+# NVD CVE index (~9.6 MB)
+COPY Project/data/nvd_index.json /app/data/nvd_index.json
+
+# Qdrant 206k vector database (~3.3 GB) for embedded GPU-accelerated retrieval
+COPY Project/qdrant_storage/ /app/qdrant_storage/
+
+# ── Symlinks for all import styles used in the code ──────────────────────────
+# The code imports via three paths depending on context:
+#   from Qdrant_Api.xxx        → /app/Qdrant_Api  ✓
+#   from API_qdrant_Vul_db.Qdrant_Api.xxx → /app/API_qdrant_Vul_db/Qdrant_Api
+#   import config              → /app/Qdrant_Api ✓ (via PYTHONPATH)
+RUN mkdir -p /app/API_qdrant_Vul_db && \
+    ln -s /app/Qdrant_Api /app/API_qdrant_Vul_db/Qdrant_Api
+
+# Remove any broken host-machine symlinks that landed in the COPY
+RUN rm -rf /app/Qdrant_Api/models \
+           /app/Qdrant_Api/data \
+           /app/Qdrant_Api/qdrant_storage && \
+    ln -s /app/models /app/Qdrant_Api/models && \
+    ln -s /app/data   /app/Qdrant_Api/data && \
+    ln -s /app/qdrant_storage /app/Qdrant_Api/qdrant_storage
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=20s --timeout=5s --start-period=60s --retries=5 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+CMD ["python", "/app/Qdrant_Api/api_server.py", "--host", "0.0.0.0", "--port", "8080"]

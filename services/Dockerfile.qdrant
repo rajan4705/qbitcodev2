@@ -1,0 +1,14 @@
+# =============================================================================
+# Container 1: Qdrant Vector Database
+# Standalone – qdrant_storage (206k vectors, 3.3 GB) baked into the image.
+# Runs on any system with Docker, no external files needed.
+# =============================================================================
+
+FROM qdrant/qdrant:v1.11.0
+
+# Copy the entire pre-built vector database into the image
+COPY Project/qdrant_storage/ /qdrant/storage/
+
+EXPOSE 6333 6334
+
+# Default qdrant entrypoint handles everything; no override needed.

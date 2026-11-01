@@ -1,0 +1,36 @@
+{
+  "name": "qbit-code-reviewer",
+  "version": "1.0.0",
+  "description": "Qbit Code Reviewer: Autonomous AI-Powered Code Review and Remediation Engine powered by OpenCode, Open Code Review, and vLLM",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "qbit": "./bin/qbit.js"
+  },
+  "scripts": {
+    "start": "node bin/qbit.js ui",
+    "cli": "node bin/qbit.js",
+    "scan": "node bin/qbit.js scan",
+    "review": "node bin/qbit.js review",
+    "fix": "node bin/qbit.js fix",
+    "chat": "node bin/qbit.js chat"
+  },
+  "keywords": [
+    "code-review",
+    "vulnerability-scanner",
+    "opencode",
+    "open-code-review",
+    "vllm",
+    "self-healing-code"
+  ],
+  "author": "Qbit Team",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "open": "^10.1.0"
+  }
+}

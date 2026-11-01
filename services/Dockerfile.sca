@@ -1,0 +1,59 @@
+# =============================================================================
+# Container 3: Universal 13-Language SCA Vulnerability Engine – Port 8082
+#
+# Standalone – everything baked in:
+#   • SQLite OSV vulnerability database (185k+ advisories, 138 MB)
+#   • All source code
+#   • All Python dependencies pinned to exact versions
+#
+# CPU-only. Lightweight (~250 MB base image). No GPU needed.
+# =============================================================================
+
+FROM python:3.10-slim
+
+# ── Environment ──────────────────────────────────────────────────────────────
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    # Points to the baked-in SQLite database
+    VULN_DB_PATH=/app/vul_packages/vulnerabilities.db \
+    PYTHONPATH=/app:/app/vul_packages
+
+# ── OS packages ──────────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Virtual environment ───────────────────────────────────────────────────────
+RUN python3 -m venv /opt/venv
+
+# ── Python dependencies (exact versions) ─────────────────────────────────────
+RUN pip install --no-cache-dir \
+    fastapi==0.136.3 \
+    uvicorn[standard]==0.52.4 \
+    pydantic==2.13.4 \
+    python-multipart==0.0.32 \
+    requests==2.34.2
+
+WORKDIR /app
+
+# ── Application source code + baked-in SQLite database ───────────────────────
+# Build context is vul_packages directory (only ~144 MB context)
+COPY . /app/vul_packages
+
+# Symlink for alternative import style: from API_qdrant_Vul_db.vul_packages.xxx
+RUN mkdir -p /app/API_qdrant_Vul_db && \
+    ln -s /app/vul_packages /app/API_qdrant_Vul_db/vul_packages
+
+# The database is already inside /app/vul_packages/vulnerabilities.db (from COPY above).
+# scan_repo.py reads: Path(__file__).parent / "vulnerabilities.db"
+# which resolves to /app/vul_packages/vulnerabilities.db  ✓
+
+EXPOSE 8082
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=15s --retries=5 \
+    CMD curl -f http://localhost:8082/health || exit 1
+
+CMD ["python", "/app/vul_packages/api_server.py", "--host", "0.0.0.0", "--port", "8082"]

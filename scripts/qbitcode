@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Master One-Command Orchestrator: 'qbitcode'
+# Starts in sequence:
+# 1. Port 6333 (Qdrant Vector DB)
+# 2. Port 8080 (CWE/CVE Threat Attribution Engine)
+# 3. Port 8082 (SCA Universal Package Engine)
+# 4. Port 8000 (vLLM AI Model Server)
+# 5. Port 5432 (Qbit Web Cockpit)
+# 6. OpenCode Interactive CLI / TUI with /vllm, /scan, /fastscan, /ui
+# ==============================================================================
+set -e
+
+# Resolve real path in case this script was called via symlink in ~/.local/bin
+REAL_SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "$REAL_SCRIPT_PATH")" && pwd)"
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
+TARGET_DIR="$(pwd)"
+if [ -n "$1" ] && [ -d "$1" ]; then
+  TARGET_DIR="$(cd "$1" && pwd)"
+  shift
+fi
+
+echo "========================================================================"
+echo "🚀 Starting QbitCode Autonomous Security Engine & Pipeline"
+echo "========================================================================"
+echo "Target Workspace: $TARGET_DIR"
+
+# Step 1: Check Docker microservices (:6333, :8080, :8082)
+echo ""
+echo "[1/4] Checking Microservices (:6333 Qdrant, :8080 SAST, :8082 SCA)..."
+if ! curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1 || ! curl -sf http://127.0.0.1:8082/health >/dev/null 2>&1; then
+  echo "Services offline. Starting Docker containers..."
+  COMPOSE_FILE="$BASE_DIR/services/docker-compose.yml"
+  if [ ! -f "$COMPOSE_FILE" ]; then
+    COMPOSE_FILE="$BASE_DIR/docker/docker-compose.yml"
+  fi
+  docker compose -f "$COMPOSE_FILE" up -d 2>/dev/null || true
+  sleep 2
+else
+  echo "✓ Microservices (:8080, :8082, :6333) are already online!"
+fi
+
+# Step 2: Check vLLM (:8000)
+echo ""
+echo "[2/4] Checking vLLM AI Engine (:8000)..."
+if ! curl -sf http://127.0.0.1:8000/health >/dev/null 2>&1; then
+  echo "vLLM offline. Launching Qwen2.5-Coder-14B in background daemon..."
+  screen -wipe 2>/dev/null || true
+  screen -dmS vllm_daemon "$BASE_DIR/scripts/start_vllm_14b.sh" 8000
+  echo "Waiting for vLLM health check..."
+  for i in $(seq 1 40); do
+    if curl -sf http://127.0.0.1:8000/health >/dev/null 2>&1; then
+      echo "✓ vLLM is online!"
+      break
+    fi
+    sleep 2
+  done
+else
+  ACTIVE_MODEL=$(curl -s http://127.0.0.1:8000/v1/models | grep -o '"id":"[^"]*' | head -n 1 | cut -d'"' -f4 || echo "vllm")
+  echo "✓ vLLM is online! Active Model: $ACTIVE_MODEL"
+fi
+
+# Step 3: Launch Qbit Web UI Cockpit (:5432)
+echo ""
+echo "[3/4] Launching Qbit Web Cockpit (:5432)..."
+fuser -k 5432/tcp 2>/dev/null || true
+nohup node "$BASE_DIR/qbit-code-reviewer/bin/qbit.js" ui --port 5432 --workspace "$TARGET_DIR" --no-open > /tmp/qbit_cockpit.log 2>&1 &
+sleep 2
+echo "✓ Web Cockpit running at: http://localhost:5432"
+
+# Step 4: Launch OpenCode / Qbit Interactive CLI
+echo ""
+echo "[4/4] Launching OpenCode Interactive TUI..."
+echo "Use /scan, /fastscan, /vllm, /findings, or /ui inside the chat."
+echo ""
+cd "$TARGET_DIR"
+
+# Locate the compiled binary
+OPENCODE_BIN="$BASE_DIR/terminal-tui/packages/cli/dist/cli-linux-x64/bin/opencode"
+if [ ! -f "$OPENCODE_BIN" ]; then
+  OPENCODE_BIN="$HOME/.local/bin/opencode"
+fi
+if [ ! -f "$OPENCODE_BIN" ]; then
+  OPENCODE_BIN="$BASE_DIR/opencode/packages/cli/dist/cli-linux-x64/bin/opencode"
+fi
+if [ ! -f "$OPENCODE_BIN" ]; then
+  OPENCODE_BIN="$HOME/.opencode/bin/opencode"
+fi
+
+exec "$OPENCODE_BIN" "$@"

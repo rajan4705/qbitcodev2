@@ -1,0 +1,182 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Orbitron:wght@500;600;700;800;900&display=swap');
+
+:root {
+  --bg-pure-black: #000000;
+  --bg-card: #030816;
+  --bg-card-hover: #05102a;
+  
+  /* Electric Blue & Cyan Accents (NO GREEN) */
+  --neon-blue: #0070f3;
+  --neon-cyan: #00f0ff;
+  --neon-electric: #38bdf8;
+  --neon-dim: rgba(0, 240, 255, 0.12);
+  --border-neon: rgba(0, 240, 255, 0.25);
+  --border-glow: 0 0 15px rgba(0, 240, 255, 0.35);
+
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Orbitron', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-pure-black);
+  color: #e0f2fe;
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* CRT Scanline Overlay */
+.crt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.03),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.03)
+  );
+  background-size: 100% 3px, 6px 100%;
+  opacity: 0.7;
+}
+
+/* Faint Perspective Grid Background */
+.perspective-grid {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  height: 50vh;
+  pointer-events: none;
+  background: 
+    linear-gradient(to bottom, transparent, #000000),
+    linear-gradient(rgba(0, 240, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.08) 1px, transparent 1px);
+  background-size: 100% 100%, 40px 40px, 40px 40px;
+  transform: perspective(300px) rotateX(65deg);
+  transform-origin: bottom center;
+  z-index: 1;
+}
+
+/* Neon Glow Utilities */
+.neon-halo {
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.7), 0 0 20px rgba(0, 112, 243, 0.5);
+}
+
+.neon-box-glow {
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.22), inset 0 0 12px rgba(0, 240, 255, 0.06);
+}
+
+.neon-button-glow:hover {
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+/* RGB Glitch Effect on Title */
+@keyframes glitch-anim {
+  0% {
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.8), 2px 2px #0070f3, -2px -2px #00f0ff;
+  }
+  20% {
+    text-shadow: -2px 0 #0070f3, 2px 0 #00f0ff;
+  }
+  40% {
+    text-shadow: 2px -2px #0070f3, -2px 2px #00f0ff;
+  }
+  60% {
+    text-shadow: 0 0 12px rgba(0, 240, 255, 0.9);
+  }
+  80% {
+    text-shadow: -1px 2px #0070f3, 1px -2px #00f0ff;
+  }
+  100% {
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.8);
+  }
+}
+
+.glitch-title {
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  animation: glitch-anim 4s infinite alternate;
+}
+
+/* Custom Cyber Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #020612;
+}
+::-webkit-scrollbar-thumb {
+  background: #0070f3;
+  box-shadow: 0 0 8px #00f0ff;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00f0ff;
+}
+
+/* Synthesizer Loading Animations */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes reverse-spin-slow {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes radar-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 25px rgba(0, 240, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 240, 255, 0);
+  }
+}
+
+@keyframes scanline-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes shimmer-bar {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.radar-ring {
+  animation: radar-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.spin-ring {
+  animation: spin-slow 8s linear infinite;
+}
+
+.reverse-spin-ring {
+  animation: reverse-spin-slow 6s linear infinite;
+}
+
+.shimmer-progress {
+  background: linear-gradient(90deg, #0070f3 0%, #00f0ff 50%, #38bdf8 100%);
+  background-size: 200% 100%;
+  animation: shimmer-bar 2s linear infinite;
+}

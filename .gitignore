@@ -1,0 +1,79 @@
+# ==============================================================================
+# QbitCode Core Git Ignore Configuration
+# ==============================================================================
+
+# LLM Models & Heavy Shards (~28GB to ~60GB)
+models/
+models/*
+**/models/
+*jina*
+*.safetensors
+*.bin
+*.pt
+*.onnx
+
+# Microservice Databases & Storage Engines
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite*
+qdrant_storage/
+**/qdrant_storage/
+zips/
+**/zips/
+scan-res.json
+**/reports/*.json
+
+# Sensitive Credentials & Local API Keys
+.env
+.env.*
+!.env.example
+.env.githubpat
+*.token
+*.pem
+*.key
+
+# Test Repositories & Mock Data
+testing repos/
+"testing repos /"
+testing repos */
+Mock_Data/
+ps1_mock2/
+Software_*/
+
+# Local Caches & Sessions
+.qbit/
+.opencodereview/
+.cache/
+*.log
+/tmp/vllm*.log
+/tmp/qbit_cockpit.log
+
+# Build Outputs & Intermediate Distribution Assets
+dist/
+build/
+*.tar.gz
+*.zip
+exported_images/
+
+# Package Dependencies
+node_modules/
+.bun/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# IDE & Editor Settings
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Intermediate Scan Output
+ocr_output.json
+ocr_output_*.json
+vulnerabilities*.csv
+report*.csv

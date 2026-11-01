@@ -1,0 +1,30 @@
+name: qwen3_env
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10.16
+  - pip=24.0
+  - pip:
+      - vllm==0.31.0
+      - torch==2.13.0
+      - torchvision==0.28.0
+      - torchaudio==2.11.0
+      - transformers==5.17.0
+      - huggingface_hub==1.33.0
+      - flashinfer-python==0.7.0.post1
+      - triton==3.7.1
+      - fastapi==0.136.3
+      - uvicorn==0.54.0
+      - uvloop==0.23.0
+      - openai==3.40.0
+      - pydantic==2.14.1
+      - accelerate==1.15.0
+      - safetensors==0.8.0
+      - sentencepiece==0.2.2
+      - tokenizers==0.23.3
+      - qdrant-client>=1.11.0
+      - einops==0.8.2
+      - z3-solver==4.15.4.0

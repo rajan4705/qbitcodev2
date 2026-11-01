@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment and sensitive files
+.env
+*.env
+.env.*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Output and temp files
+ocr_output.json
+dist/
+build/
+.cache/
+.temp/
+
+# IDE and OS
+.DS_Store
+Thumbs.db
