@@ -51,3 +51,15 @@ This checklist tracks testing and operational readiness across all newly built s
 - [x] Include complete REST API catalog and payload schemas.
 - [x] Include CLI, TUI slash commands, and Web Cockpit navigation guide.
 - [x] Document cost reductions and performance optimization metrics.
+
+---
+
+### Phase 6: Hugging Face Threat Intelligence Hosting & Deployment
+- [x] Create public Hugging Face dataset repository: [`saad0503/qbitcode-dbs`](https://huggingface.co/datasets/saad0503/qbitcode-dbs).
+- [x] Package and upload `sca_vulnerabilities_db.zip` (33 MB, 185k+ OSV advisories).
+- [x] Package and upload `sast_nvd_index.zip` (1.2 MB, NVD CVE index).
+- [x] Package and upload `qdrant_storage.tar.gz` (760 MB, 206k threat vectors).
+- [x] Wire official Jina 1.5B direct download from [`jinaai/jina-code-embeddings-1.5b`](https://huggingface.co/jinaai/jina-code-embeddings-1.5b).
+- [x] Create single-command database downloader: [`scripts/download_databases.sh`](file:///home/minakshi.katoch/Desktop/qbitcode/scripts/download_databases.sh).
+- [x] Create simplified microservices launcher: [`scripts/launch_services.sh`](file:///home/minakshi.katoch/Desktop/qbitcode/scripts/launch_services.sh).
+- [x] Update `setup.sh`, `scripts/qbitcode`, and `README.md` with streamlined database workflows.
