@@ -8,11 +8,11 @@ PORT=${1:-8000}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Prefer 4-bit AWQ if available (fits in 5.2GB), otherwise fallback to standard 7B
-if [ -d "$WORKSPACE_ROOT/models/qwen2.5-coder-7b-instruct-awq" ]; then
-  MODEL_PATH="$WORKSPACE_ROOT/models/qwen2.5-coder-7b-instruct-awq"
-else
+# Prefer standard unquantized 7B, fallback to AWQ only if standard is missing
+if [ -d "$WORKSPACE_ROOT/models/qwen2.5-coder-7b-instruct" ]; then
   MODEL_PATH="$WORKSPACE_ROOT/models/qwen2.5-coder-7b-instruct"
+else
+  MODEL_PATH="$WORKSPACE_ROOT/models/qwen2.5-coder-7b-instruct-awq"
 fi
 
 CONDA_BASE="$(command -v conda >/dev/null 2>&1 && conda info --base 2>/dev/null || echo "/opt/anaconda3")"
@@ -38,8 +38,8 @@ echo "  • Model path: $MODEL_PATH"
 nohup $ENV_PYTHON $VLLM_BIN serve "$MODEL_PATH" \
   --served-model-name qwen2.5-coder-7b-instruct \
   --port $PORT \
-  --max-model-len 8192 \
-  --gpu-memory-utilization 0.60 \
+  --max-model-len 32768 \
+  --gpu-memory-utilization 0.85 \
   --enforce-eager \
   --enable-auto-tool-choice \
   --tool-call-parser hermes \

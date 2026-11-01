@@ -130,7 +130,7 @@ services:
     ports:
       - "${VLLM_PORT:-8000}:8000"
     volumes:
-      - ${MODEL_PATH:-../models/qwen2.5-coder-7b-instruct-awq}:/model:ro
+      - ${MODEL_PATH:-../models/qwen2.5-coder-14b-instruct}:/model:ro
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - CUDA_VISIBLE_DEVICES=0
@@ -138,7 +138,7 @@ services:
       - TRANSFORMERS_OFFLINE=1
     command: >
       /model
-      --served-model-name ${MODEL_NAME:-qwen2.5-coder-7b-instruct}
+      --served-model-name ${MODEL_NAME:-qwen2.5-coder-14b-instruct}
       --port 8000
       --max-model-len ${MAX_MODEL_LEN:-32768}
       --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.85}

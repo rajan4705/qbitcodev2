@@ -31,7 +31,7 @@ nohup $ENV_PYTHON $VLLM_BIN serve "$MODEL_PATH" \
   --served-model-name qwen2.5-coder-14b-instruct \
   --port $PORT \
   --max-model-len 32768 \
-  --gpu-memory-utilization 0.80 \
+  --gpu-memory-utilization 0.85 \
   --enable-auto-tool-choice \
   --tool-call-parser hermes \
   --trust-remote-code > /tmp/vllm-14b.log 2>&1 &

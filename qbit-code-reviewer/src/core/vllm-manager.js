@@ -12,9 +12,9 @@ const MODELS_BASE = process.env.MODELS_DIR || (
 );
 const PORT = parseInt(process.env.VLLM_PORT || '8000', 10);
 
-const awq7bPath = path.join(MODELS_BASE, 'qwen2.5-coder-7b-instruct-awq');
 const standard7bPath = path.join(MODELS_BASE, 'qwen2.5-coder-7b-instruct');
-const resolved7bPath = fs.existsSync(awq7bPath) ? awq7bPath : standard7bPath;
+const awq7bPath = path.join(MODELS_BASE, 'qwen2.5-coder-7b-instruct-awq');
+const resolved7bPath = fs.existsSync(standard7bPath) ? standard7bPath : awq7bPath;
 
 export const MODEL_PROFILES = {
   '7b': {
@@ -23,12 +23,12 @@ export const MODEL_PROFILES = {
     servedModelName: 'qwen2.5-coder-7b-instruct',
     path: resolved7bPath,
     toolCallParser: 'hermes',
-    maxModelLen: 8192,
-    gpuMemoryUtilization: 0.60,
+    maxModelLen: 32768,
+    gpuMemoryUtilization: 0.85,
     kvCacheDtype: 'auto',
     recommendedConcurrency: 8,
     badge: 'LIGHTWEIGHT RUNNER (8x)',
-    description: 'Fast, efficient 7B coder model optimized for single GPU and consumer setups.'
+    description: 'Fast, efficient unquantized 7B coder model with full 32k context.'
   },
   '14b': {
     id: '14b',
@@ -37,7 +37,7 @@ export const MODEL_PROFILES = {
     path: path.join(MODELS_BASE, 'qwen2.5-coder-14b-instruct'),
     toolCallParser: 'hermes',
     maxModelLen: 32768,
-    gpuMemoryUtilization: 0.80,
+    gpuMemoryUtilization: 0.85,
     kvCacheDtype: 'auto',
     recommendedConcurrency: 8,
     badge: 'FAST BUG HUNTER (8x)',
