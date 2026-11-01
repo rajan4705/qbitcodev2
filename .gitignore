@@ -42,6 +42,10 @@ Mock_Data/
 ps1_mock2/
 Software_*/
 
+# Binaries
+bin/
+*.exe
+
 # Local Caches & Sessions
 .qbit/
 .opencodereview/

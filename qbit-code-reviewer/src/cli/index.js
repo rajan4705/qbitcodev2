@@ -83,13 +83,24 @@ export function createCli() {
     .option('-w, --workspace <path>', 'Workspace directory to open')
     .option('--no-open', 'Do not automatically open the browser')
     .action(async (options) => {
-      const port = parseInt(options.port, 10);
+      let port = parseInt(options.port, 10);
 
-      // Kill any previous UI server holding this port
-      try {
-        const { execSync } = await import('node:child_process');
-        execSync(`fuser -k ${port}/tcp 2>/dev/null || true`);
-      } catch {}
+      // Check if port is in use and find an available port if needed
+      const net = await import('node:net');
+      const isPortFree = (p) => new Promise(resolve => {
+        const tester = net.createServer()
+          .once('error', () => resolve(false))
+          .once('listening', () => tester.close(() => resolve(true)))
+          .listen(p);
+      });
+
+      const initialPort = port;
+      while (!(await isPortFree(port)) && port < initialPort + 10) {
+        port++;
+      }
+      if (port !== initialPort) {
+        console.log(chalk.yellow(`⚠️  Port ${initialPort} is in use (e.g. system postgres). Switched to port ${port}.`));
+      }
 
       if (options.workspace) {
         try {

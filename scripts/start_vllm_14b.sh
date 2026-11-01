@@ -8,8 +8,16 @@ PORT=${1:-8000}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 MODEL_PATH="$WORKSPACE_ROOT/models/qwen2.5-coder-14b-instruct"
-ENV_PYTHON="/home/minakshi.katoch/anaconda3/envs/ps1/bin/python3.10"
-VLLM_BIN="/home/minakshi.katoch/anaconda3/envs/mrk_code_vul/bin/vllm"
+CONDA_BASE="$(command -v conda >/dev/null 2>&1 && conda info --base 2>/dev/null || echo "/opt/anaconda3")"
+ENV_PYTHON="$CONDA_BASE/envs/qwen3_env/bin/python"
+VLLM_BIN="$CONDA_BASE/envs/qwen3_env/bin/vllm"
+
+if [ ! -x "$VLLM_BIN" ]; then
+  VLLM_BIN="$(command -v vllm || echo "vllm")"
+fi
+if [ ! -x "$ENV_PYTHON" ]; then
+  ENV_PYTHON="$(command -v python3 || echo "python3")"
+fi
 
 echo "Checking for running vLLM instances on port $PORT..."
 fuser -k -9 $PORT/tcp 2>/dev/null || true

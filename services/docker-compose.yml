@@ -73,8 +73,8 @@ services:
   # ---------------------------------------------------------------------------
   sca-api:
     build:
-      context: ../API_qdrant_Vul_db/vul_packages
-      dockerfile: ../../services/Dockerfile.sca
+      context: ..
+      dockerfile: services/Dockerfile.sca
     image: codechecker-sca:latest
     container_name: codechecker-sca
     restart: unless-stopped

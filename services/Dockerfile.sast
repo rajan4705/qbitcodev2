@@ -67,17 +67,17 @@ RUN pip install --no-cache-dir \
 WORKDIR /app
 
 # ── Application source code ───────────────────────────────────────────────────
-COPY API_qdrant_Vul_db/Qdrant_Api /app/Qdrant_Api
+COPY services/services/sast/Qdrant_Api /app/Qdrant_Api
 
 # ── Baked-in model and data files ────────────────────────────────────────────
 # Jina Code Embeddings 1.5B (~2.9 GB) – copied directly into the image
-COPY Project/models/jina-code-embeddings-1.5b /app/models/jina-code-embeddings-1.5b
+COPY services/services/sast/models/jina-code-embeddings-1.5b /app/models/jina-code-embeddings-1.5b
 
 # NVD CVE index (~9.6 MB)
-COPY Project/data/nvd_index.json /app/data/nvd_index.json
+COPY services/services/sast/data/nvd_index.json /app/data/nvd_index.json
 
 # Qdrant 206k vector database (~3.3 GB) for embedded GPU-accelerated retrieval
-COPY Project/qdrant_storage/ /app/qdrant_storage/
+COPY services/services/sast/Qdrant_Api/qdrant_storage/ /app/qdrant_storage/
 
 # ── Symlinks for all import styles used in the code ──────────────────────────
 # The code imports via three paths depending on context:

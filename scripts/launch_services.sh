@@ -39,15 +39,32 @@ if command -v docker >/dev/null 2>&1; then
     sudo -n docker compose -f "$SERVICES_DIR/docker-compose.yml" up -d 2>/dev/null || true
 fi
 
+# Locate Python environment with required dependencies
+CONDA_BASE="$(command -v conda >/dev/null 2>&1 && conda info --base 2>/dev/null || echo "/opt/anaconda3")"
+PYTHON_BIN="python3"
+if [ -x "$CONDA_BASE/envs/qwen3_env/bin/python" ]; then
+  PYTHON_BIN="$CONDA_BASE/envs/qwen3_env/bin/python"
+fi
+
 # Fallback: start native processes if any service is still offline
+if ! curl -sf http://127.0.0.1:6333/healthz >/dev/null 2>&1; then
+  QDRANT_BIN="$(command -v qdrant || echo "$HOME/.local/bin/qdrant")"
+  if [ -x "$QDRANT_BIN" ]; then
+    echo "Starting Qdrant service natively on port 6333..."
+    screen -wipe 2>/dev/null || true
+    screen -dmS qdrant_daemon "$QDRANT_BIN"
+    sleep 2
+  fi
+fi
+
 if ! curl -sf http://127.0.0.1:8082/health >/dev/null 2>&1; then
   echo "Starting SCA service natively on port 8082..."
-  nohup python3 "$SERVICES_DIR/services/sca/api_server.py" --host 0.0.0.0 --port 8082 > /tmp/sca_server.log 2>&1 &
+  nohup "$PYTHON_BIN" "$SERVICES_DIR/services/sca/api_server.py" --host 0.0.0.0 --port 8082 > /tmp/sca_server.log 2>&1 &
 fi
 
 if ! curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1; then
   echo "Starting SAST threat attribution service natively on port 8080..."
-  nohup python3 "$SERVICES_DIR/services/sast/Qdrant_Api/api_server.py" --host 0.0.0.0 --port 8080 > /tmp/sast_server.log 2>&1 &
+  nohup "$PYTHON_BIN" "$SERVICES_DIR/services/sast/Qdrant_Api/api_server.py" --host 0.0.0.0 --port 8080 > /tmp/sast_server.log 2>&1 &
 fi
 
 # Wait for services to report healthy

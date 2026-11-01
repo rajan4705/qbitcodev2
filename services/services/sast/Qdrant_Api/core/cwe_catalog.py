@@ -10,7 +10,10 @@ from typing import Dict, List, Optional, Any
 try:
     from API_qdrant_Vul_db.Qdrant_Api.core.language_profiles import normalize_language_key
 except ImportError:
-    from API_qdrant_Vul_db.Qdrant_Api.core.language_profiles import normalize_language_key
+    try:
+        from Qdrant_Api.core.language_profiles import normalize_language_key
+    except ImportError:
+        from core.language_profiles import normalize_language_key
 
 # Official Standard MITRE CWE Descriptions
 MITRE_CWE_DESCRIPTIONS: Dict[str, str] = {

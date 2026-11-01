@@ -40,8 +40,7 @@ RUN pip install --no-cache-dir \
 WORKDIR /app
 
 # ── Application source code + baked-in SQLite database ───────────────────────
-# Build context is vul_packages directory (only ~144 MB context)
-COPY . /app/vul_packages
+COPY services/services/sca /app/vul_packages
 
 # Symlink for alternative import style: from API_qdrant_Vul_db.vul_packages.xxx
 RUN mkdir -p /app/API_qdrant_Vul_db && \

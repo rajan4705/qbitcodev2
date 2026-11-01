@@ -7,7 +7,7 @@
 FROM qdrant/qdrant:v1.11.0
 
 # Copy the entire pre-built vector database into the image
-COPY Project/qdrant_storage/ /qdrant/storage/
+COPY services/services/sast/Qdrant_Api/qdrant_storage/ /qdrant/storage/
 
 EXPOSE 6333 6334
 

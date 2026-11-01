@@ -31,8 +31,9 @@ fi
 
 # 2. Check Python Environment
 echo "[1/6] Checking Python & vLLM Dependencies..."
+CONDA_BASE="$(command -v conda >/dev/null 2>&1 && conda info --base 2>/dev/null || echo "/opt/anaconda3")"
 if command -v conda >/dev/null 2>&1; then
-  echo "    Conda detected."
+  echo "    Conda detected at $CONDA_BASE."
   if conda info --envs | grep -q "qwen3_env"; then
     echo "    ✓ Conda env 'qwen3_env' already exists."
   elif [ -f "environment_conda.yml" ]; then
@@ -41,30 +42,40 @@ if command -v conda >/dev/null 2>&1; then
   fi
 fi
 
-if [ -f "requirements_vllm_qwen3.txt" ]; then
+if [ -x "$CONDA_BASE/envs/qwen3_env/bin/pip" ] && [ -f "requirements_vllm_qwen3.txt" ]; then
+  echo "    Checking/verifying dependencies in 'qwen3_env'..."
+  # qwen3_env already contains all required packages
+  echo "    ✓ 'qwen3_env' is ready with Python 3.10 and vLLM."
+elif [ -f "requirements_vllm_qwen3.txt" ]; then
   echo "    Installing/verifying pip requirements..."
   pip install -q -r requirements_vllm_qwen3.txt || true
 fi
 
-# 3. Build & Link Code Review Engine ('ocr')
+# 3. Build & Link Code Review Engine ('ocr') & Qdrant ('qdrant')
 echo ""
-echo "[2/6] Building Code Review Engine (Go binary 'ocr')..."
-if [ -d "code-review-engine" ]; then
-  cd code-review-engine
-  GO_BIN="$(command -v go || echo "$HOME/anaconda3/bin/go")"
-  if [ -x "$GO_BIN" ]; then
-    CGO_ENABLED=0 "$GO_BIN" build -ldflags "-s -w" -o "$HOME/.local/bin/ocr" ./cmd/opencodereview || true
-    chmod +x "$HOME/.local/bin/ocr"
-    echo "    ✓ Built & installed: $HOME/.local/bin/ocr"
-  else
-    echo "    ⚠️ Go not installed. Checking pre-compiled binary..."
-    if [ -f "bin/ocr" ]; then
-      cp "bin/ocr" "$HOME/.local/bin/ocr"
-      chmod +x "$HOME/.local/bin/ocr"
-      echo "    ✓ Copied pre-compiled binary: $HOME/.local/bin/ocr"
-    fi
-  fi
-  cd "$SCRIPT_DIR"
+echo "[2/6] Setting up Core Binaries ('ocr' and 'qdrant')..."
+if [ -f "$HOME/.local/bin/ocr" ] && [ -x "$HOME/.local/bin/ocr" ]; then
+  echo "    ✓ Found existing binary: $HOME/.local/bin/ocr"
+elif [ -f "bin/ocr" ]; then
+  cp "bin/ocr" "$HOME/.local/bin/ocr"
+  chmod +x "$HOME/.local/bin/ocr"
+  echo "    ✓ Installed 'ocr' binary: $HOME/.local/bin/ocr"
+else
+  echo "    Installing official pre-compiled 'ocr' binary via install.sh..."
+  OCR_INSTALL_DIR="$HOME/.local/bin" bash code-review-engine/install.sh || true
+fi
+
+if [ -f "$HOME/.local/bin/qdrant" ] && [ -x "$HOME/.local/bin/qdrant" ]; then
+  echo "    ✓ Found existing binary: $HOME/.local/bin/qdrant"
+elif [ -f "bin/qdrant" ]; then
+  cp "bin/qdrant" "$HOME/.local/bin/qdrant"
+  chmod +x "$HOME/.local/bin/qdrant"
+  echo "    ✓ Installed 'qdrant' binary: $HOME/.local/bin/qdrant"
+else
+  echo "    Downloading standalone 'qdrant' binary..."
+  curl -sL https://github.com/qdrant/qdrant/releases/download/v1.11.0/qdrant-x86_64-unknown-linux-gnu.tar.gz | tar -xz -C "$HOME/.local/bin/" || true
+  chmod +x "$HOME/.local/bin/qdrant" 2>/dev/null || true
+  echo "    ✓ Downloaded & installed: $HOME/.local/bin/qdrant"
 fi
 
 # 4. Build & Link Terminal TUI ('opencode')
@@ -87,14 +98,20 @@ fi
 
 # 5. Build Qbit Web Cockpit
 echo ""
-echo "[4/6] Building Qbit Web Cockpit Frontend..."
+echo "[4/6] Checking Qbit Web Cockpit Frontend..."
 if [ -d "qbit-code-reviewer" ]; then
   cd qbit-code-reviewer
-  npm install --silent 2>/dev/null || true
+  if [ ! -d "node_modules" ]; then
+    npm install --silent 2>/dev/null || true
+  fi
   if [ -d "ui" ]; then
     cd ui
-    npm install --silent 2>/dev/null || true
-    npm run build 2>/dev/null || true
+    if [ ! -f "dist/index.html" ]; then
+      npm install --silent 2>/dev/null || true
+      npm run build 2>/dev/null || true
+    else
+      echo "    ✓ Production Web UI bundle already built (ui/dist)."
+    fi
     cd ..
   fi
   chmod +x bin/qbit.js

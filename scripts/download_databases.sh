@@ -98,7 +98,12 @@ if [ -d "$JINA_DIR" ] && [ -f "$JINA_DIR/model.safetensors" ]; then
 else
   echo "    Downloading official jinaai/jina-code-embeddings-1.5b from Hugging Face..."
   mkdir -p "$JINA_DIR"
-  python3 -c "
+CONDA_BASE="$(command -v conda >/dev/null 2>&1 && conda info --base 2>/dev/null || echo "/opt/anaconda3")"
+PYTHON_BIN="python3"
+if [ -x "$CONDA_BASE/envs/qwen3_env/bin/python" ]; then
+  PYTHON_BIN="$CONDA_BASE/envs/qwen3_env/bin/python"
+fi
+  "$PYTHON_BIN" -c "
 from huggingface_hub import snapshot_download
 import sys
 
