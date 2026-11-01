@@ -106,14 +106,16 @@ fi
 # 6. Docker Microservices (:6333 Qdrant, :8080 SAST, :8082 SCA)
 echo ""
 echo "[5/6] Checking Docker Microservices..."
-if command -v docker >/dev/null 2>&1; then
+if curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1 && curl -sf http://127.0.0.1:8082/health >/dev/null 2>&1; then
+  echo "    ✓ Microservices (:8080, :8082, :6333) are already online!"
+elif command -v docker >/dev/null 2>&1; then
   COMPOSE_FILE="services/docker-compose.yml"
   if [ ! -f "$COMPOSE_FILE" ]; then
     COMPOSE_FILE="docker/docker-compose.yml"
   fi
   if [ -f "$COMPOSE_FILE" ]; then
     echo "    Starting Qdrant, SAST, and SCA microservices ($COMPOSE_FILE)..."
-    docker compose -f "$COMPOSE_FILE" up -d 2>/dev/null || sudo docker compose -f "$COMPOSE_FILE" up -d 2>/dev/null || true
+    docker compose -f "$COMPOSE_FILE" up -d 2>/dev/null || sudo -n docker compose -f "$COMPOSE_FILE" up -d 2>/dev/null || true
   fi
 else
   echo "    ⚠️ Docker not installed. Microservices can be started manually when ready."
