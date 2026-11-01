@@ -249,6 +249,7 @@ export function createApp() {
   // SCA Vulnerability Package Scanner (via port 8082 Universal SCA API)
   app.post('/api/sca/scan', async (req, res) => {
     try {
+      const scaBaseUrl = (process.env.SCA_URL || 'http://localhost:8082').replace(/\/+$/, '');
       let targetPath = req.body.target_path || process.cwd();
       const minSeverity = req.body.min_severity || 'LOW';
       const activeOnly = req.body.active_only !== undefined ? req.body.active_only : false;
@@ -296,7 +297,7 @@ else:
             if (minSeverity) form.append('min_severity', minSeverity);
             form.append('active_only', activeOnly ? 'true' : 'false');
 
-            const submitRes = await fetch('http://localhost:8082/api/v1/jobs/submit', {
+            const submitRes = await fetch(`${scaBaseUrl}/api/v1/jobs/submit`, {
               method: 'POST',
               body: form,
               signal: AbortSignal.timeout(30000)
@@ -309,13 +310,13 @@ else:
                 let attempts = 0;
                 while (attempts < 60) {
                   await new Promise(resolve => setTimeout(resolve, 800));
-                  const pollRes = await fetch(`http://localhost:8082/api/v1/jobs/${jobId}`, {
+                  const pollRes = await fetch(`${scaBaseUrl}/api/v1/jobs/${jobId}`, {
                     signal: AbortSignal.timeout(5000)
                   });
                   if (pollRes.ok) {
                     const pollData = await pollRes.json();
                     if (pollData.status === 'completed') {
-                      const dlRes = await fetch(`http://localhost:8082/api/v1/jobs/${jobId}/download`, {
+                      const dlRes = await fetch(`${scaBaseUrl}/api/v1/jobs/${jobId}/download`, {
                         signal: AbortSignal.timeout(10000)
                       });
                       if (dlRes.ok) {
@@ -341,7 +342,7 @@ else:
       }
 
       // Fallback to direct scan endpoint if packaging was skipped or direct container access is available
-      const scaResponse = await fetch('http://localhost:8082/api/v1/scan', {
+      const scaResponse = await fetch(`${scaBaseUrl}/api/v1/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -363,7 +364,7 @@ else:
       res.json(data);
     } catch (err) {
       res.status(502).json({
-        error: `Failed to connect to SCA scanner on port 8082: ${err.message}`
+        error: `Failed to connect to SCA scanner on ${scaBaseUrl}: ${err.message}`
       });
     }
   });

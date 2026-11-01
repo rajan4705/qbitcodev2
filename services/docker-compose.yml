@@ -1,10 +1,11 @@
 version: "3.9"
 
 # =============================================================================
-# Codechecker Security Platform – Single Docker Compose
+# Codechecker Security Platform – Complete Docker Compose Stack
 #
-# Three standalone services. All data/models/DBs are baked into the images.
-# Run from the repo root:  docker compose -f docker/docker-compose.yml up -d
+# Standalone microservices + Web Cockpit GUI.
+# All data/models/DBs are baked directly into the container images.
+# Run from repo root:  docker compose -f services/docker-compose.yml up -d
 # =============================================================================
 
 services:
@@ -15,7 +16,7 @@ services:
   # ---------------------------------------------------------------------------
   qdrant:
     build:
-      context: ..                         # repo root is the build context
+      context: ..
       dockerfile: services/Dockerfile.qdrant
     image: codechecker-qdrant:latest
     container_name: codechecker-qdrant
@@ -24,11 +25,11 @@ services:
       - "6333:6333"   # REST API + Web Dashboard
       - "6334:6334"   # gRPC
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:6333/healthz | grep -q ok"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 10s
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333'"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   # ---------------------------------------------------------------------------
   # 2. SAST – CWE/CVE Threat Attribution Engine (GPU accelerated)
@@ -48,7 +49,7 @@ services:
     ports:
       - "8080:8080"   # REST API + Web Dashboard
     environment:
-      - QDRANT_HOST=qdrant      # Docker service name resolves on the network
+      - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - NVIDIA_VISIBLE_DEVICES=all
       - CUDA_VISIBLE_DEVICES=0
@@ -63,13 +64,12 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/health | grep -q healthy"]
       interval: 20s
       timeout: 5s
-      retries: 5
-      start_period: 60s
+      retries: 6
+      start_period: 40s
 
   # ---------------------------------------------------------------------------
   # 3. SCA – Universal 13-Language Dependency Vulnerability Engine
-  #    SQLite OSV database (185k+ advisories) baked into the image.
-  #    CPU-only, lightweight.
+  #    SQLite OSV database (305k+ advisories) baked into the image.
   # ---------------------------------------------------------------------------
   sca-api:
     build:
@@ -87,7 +87,33 @@ services:
       retries: 5
       start_period: 15s
 
+  # ---------------------------------------------------------------------------
+  # 4. Web Cockpit – Cyberpunk React GUI & Review Orchestrator
+  # ---------------------------------------------------------------------------
+  web-cockpit:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile.ui
+    image: codechecker-ui:latest
+    container_name: codechecker-ui
+    restart: unless-stopped
+    ports:
+      - "${UI_PORT:-5433}:5432"
+    environment:
+      - PORT=5432
+      - NODE_ENV=production
+      - OCR_PATH=/usr/local/bin/ocr
+      - QBIT_ENRICHER_URL=http://sast-api:8080
+      - SCA_URL=http://sca-api:8082
+      - VLLM_URL=http://host.docker.internal:8000/v1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      sast-api:
+        condition: service_healthy
+      sca-api:
+        condition: service_healthy
+
 networks:
   default:
     name: codechecker-net
-

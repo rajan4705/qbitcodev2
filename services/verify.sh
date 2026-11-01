@@ -86,8 +86,18 @@ else
   exit 1
 fi
 
+# Test 8: Web Cockpit GUI HTML Check (5433/5432)
+UI_PORT="${UI_PORT:-5433}"
+echo -n "8. Testing Web Cockpit GUI (http://localhost:${UI_PORT}/)... "
+WEB_UI=$(curl -s "http://127.0.0.1:${UI_PORT}/" 2>/dev/null || curl -s "http://127.0.0.1:5432/" 2>/dev/null || true)
+if echo "$WEB_UI" | grep -qi "Qbit Code Reviewer"; then
+  echo "✓ OK (Web Cockpit rendered)"
+else
+  echo "⚠️  Web Cockpit not reached on ${UI_PORT} or 5432 (optional GUI container)"
+fi
+
 echo "============================================================================"
-echo "🎉 ALL 7 PRODUCTION SYSTEM TESTS PASSED!"
+echo "🎉 ALL CORE PRODUCTION SYSTEM TESTS PASSED!"
 echo "============================================================================"
 echo "Production Access Points:"
 echo "  • SAST Dashboard   : http://localhost:8080/"
@@ -95,5 +105,6 @@ echo "  • SAST Swagger     : http://localhost:8080/docs"
 echo "  • SCA Dashboard    : http://localhost:8082/"
 echo "  • SCA Swagger      : http://localhost:8082/docs"
 echo "  • Qdrant Web UI    : http://localhost:6333/dashboard"
+echo "  • Web Cockpit GUI  : http://localhost:${UI_PORT}/"
 echo "============================================================================"
 

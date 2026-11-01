@@ -19,7 +19,7 @@ if $DOCKER_CMD compose version >/dev/null 2>&1; then
 elif command -v docker-compose >/dev/null 2>&1; then
   docker-compose -f "$SCRIPT_DIR/docker-compose.yml" down
 else
-  $DOCKER_CMD rm -f codechecker-sast codechecker-sca codechecker-qdrant 2>/dev/null || true
+  $DOCKER_CMD rm -f codechecker-ui codechecker-sast codechecker-sca codechecker-qdrant 2>/dev/null || true
 fi
 
 echo "✓ Codechecker production containers stopped."

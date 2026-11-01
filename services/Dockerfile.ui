@@ -1,0 +1,32 @@
+# =============================================================================
+# Container 4: Qbit Web Cockpit GUI & Orchestrator – Port 5432
+#
+# Standalone Node.js container serving the Cyberpunk React UI & Express API.
+# Connects to SAST (:8080), SCA (:8082), and vLLM (:8000).
+# =============================================================================
+
+FROM node:20-slim
+
+WORKDIR /app
+
+# Install runtime utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    git \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install pre-compiled OCR engine
+COPY bin/ocr /usr/local/bin/ocr
+RUN chmod +x /usr/local/bin/ocr
+
+# Copy Web Cockpit backend & pre-built frontend
+COPY qbit-code-reviewer /app
+
+ENV PORT=5432 \
+    NODE_ENV=production \
+    OCR_PATH=/usr/local/bin/ocr
+
+EXPOSE 5432
+
+CMD ["node", "bin/qbit.js", "ui", "--port", "5432", "--no-open"]

@@ -39,6 +39,7 @@ if [ -f "$WORKSPACE_ROOT/stop.sh" ]; then
   bash "$WORKSPACE_ROOT/stop.sh" >/dev/null 2>&1 || true
 fi
 pkill -f "./qdrant --config-path" >/dev/null 2>&1 || true
+fuser -k 8080/tcp 8082/tcp 6333/tcp >/dev/null 2>&1 || true
 
 # Wait 2 seconds to ensure ports are completely released
 sleep 2

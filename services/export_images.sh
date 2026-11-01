@@ -10,7 +10,11 @@ OUTPUT_DIR="${1:-$WORKSPACE_ROOT/exported_images}"
 
 DOCKER_CMD="docker"
 if ! docker ps >/dev/null 2>&1; then
-  DOCKER_CMD="sudo docker"
+  if sg docker -c "docker ps" >/dev/null 2>&1; then
+    DOCKER_CMD='sg docker -c "docker'
+  else
+    DOCKER_CMD="sudo docker"
+  fi
 fi
 
 mkdir -p "$OUTPUT_DIR"
@@ -22,30 +26,40 @@ echo "==========================================================================
 
 # 1. Export Qdrant
 echo ""
-echo "[1/3] Exporting codechecker-qdrant:latest (~1.5 GB compressed)..."
-$DOCKER_CMD save codechecker-qdrant:latest | gzip > "$OUTPUT_DIR/codechecker-qdrant.tar.gz"
+echo "[1/4] Exporting codechecker-qdrant:latest (~1.5 GB compressed)..."
+docker save codechecker-qdrant:latest | gzip > "$OUTPUT_DIR/codechecker-qdrant.tar.gz"
 echo "  ✓ Saved: $OUTPUT_DIR/codechecker-qdrant.tar.gz"
 
 # 2. Export SCA
 echo ""
-echo "[2/3] Exporting codechecker-sca:latest (~300 MB compressed)..."
-$DOCKER_CMD save codechecker-sca:latest | gzip > "$OUTPUT_DIR/codechecker-sca.tar.gz"
+echo "[2/4] Exporting codechecker-sca:latest (~300 MB compressed)..."
+docker save codechecker-sca:latest | gzip > "$OUTPUT_DIR/codechecker-sca.tar.gz"
 echo "  ✓ Saved: $OUTPUT_DIR/codechecker-sca.tar.gz"
 
 # 3. Export SAST
 echo ""
-echo "[3/3] Exporting codechecker-sast:latest (~6.5 GB compressed)..."
-$DOCKER_CMD save codechecker-sast:latest | gzip > "$OUTPUT_DIR/codechecker-sast.tar.gz"
+echo "[3/4] Exporting codechecker-sast:latest (~6.5 GB compressed)..."
+docker save codechecker-sast:latest | gzip > "$OUTPUT_DIR/codechecker-sast.tar.gz"
 echo "  ✓ Saved: $OUTPUT_DIR/codechecker-sast.tar.gz"
 
-# 4. Copy management scripts
+# 4. Export Web Cockpit UI
+echo ""
+echo "[4/4] Exporting codechecker-ui:latest (~250 MB compressed)..."
+docker save codechecker-ui:latest | gzip > "$OUTPUT_DIR/codechecker-ui.tar.gz"
+echo "  ✓ Saved: $OUTPUT_DIR/codechecker-ui.tar.gz"
+
+# 5. Copy management scripts
 echo ""
 echo "Copying deployment scripts into $OUTPUT_DIR..."
 cp "$SCRIPT_DIR/deploy.sh" "$OUTPUT_DIR/"
 cp "$SCRIPT_DIR/down.sh" "$OUTPUT_DIR/"
 cp "$SCRIPT_DIR/verify.sh" "$OUTPUT_DIR/"
 cp "$SCRIPT_DIR/docker-compose.yml" "$OUTPUT_DIR/"
-cp "$SCRIPT_DIR/README.md" "$OUTPUT_DIR/"
+if [ -f "$SCRIPT_DIR/Dockerfile.ui" ]; then cp "$SCRIPT_DIR/Dockerfile.ui" "$OUTPUT_DIR/"; fi
+if [ -f "$SCRIPT_DIR/Dockerfile.sast" ]; then cp "$SCRIPT_DIR/Dockerfile.sast" "$OUTPUT_DIR/"; fi
+if [ -f "$SCRIPT_DIR/Dockerfile.sca" ]; then cp "$SCRIPT_DIR/Dockerfile.sca" "$OUTPUT_DIR/"; fi
+if [ -f "$SCRIPT_DIR/Dockerfile.qdrant" ]; then cp "$SCRIPT_DIR/Dockerfile.qdrant" "$OUTPUT_DIR/"; fi
+if [ -f "$SCRIPT_DIR/README.md" ]; then cp "$SCRIPT_DIR/README.md" "$OUTPUT_DIR/"; fi
 
 # Create quick-load script for target machine
 cat << 'EOF' > "$OUTPUT_DIR/load_and_run.sh"
@@ -57,13 +71,17 @@ if ! docker ps >/dev/null 2>&1; then
   DOCKER_CMD="sudo docker"
 fi
 
-echo "Loading Codechecker Docker images..."
+echo "Loading Codechecker Docker images from offline archives..."
 gunzip -c codechecker-qdrant.tar.gz | $DOCKER_CMD load
 gunzip -c codechecker-sca.tar.gz    | $DOCKER_CMD load
 gunzip -c codechecker-sast.tar.gz   | $DOCKER_CMD load
+if [ -f codechecker-ui.tar.gz ]; then
+  gunzip -c codechecker-ui.tar.gz   | $DOCKER_CMD load
+fi
 
-echo "✓ Images loaded successfully! Starting containers..."
-./deploy.sh
+echo "✓ All container images loaded successfully!"
+echo "Starting production Docker Compose stack..."
+$DOCKER_CMD compose -f docker-compose.yml up -d || ./deploy.sh
 EOF
 
 chmod +x "$OUTPUT_DIR/load_and_run.sh"
@@ -78,4 +96,3 @@ echo "  2. On the new system, run:"
 echo "       cd $(basename "$OUTPUT_DIR")"
 echo "       sudo ./load_and_run.sh"
 echo "============================================================================"
-

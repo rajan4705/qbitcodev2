@@ -13,21 +13,23 @@ All models, vector indices, vulnerability databases, and dependencies are baked 
 | **Qdrant** | `codechecker-qdrant` | `6333` (REST), `6334` (gRPC) | Vector DB with 206k vulnerability vectors | CPU |
 | **SAST Engine** | `codechecker-sast` | `8080` (Web UI & REST) | CWE/CVE Threat Attribution & Jina 1.5B | GPU (CUDA 13.0) |
 | **SCA Engine** | `codechecker-sca` | `8082` (Web UI & REST) | 13-Language Dependency Scanner & OSV DB | CPU |
+| **Web Cockpit** | `codechecker-ui` | `5433` (maps to `5432`) | Cyberpunk Web Cockpit GUI & Review Orchestrator | CPU |
 
 ---
 
 ## Directory Contents
 
 ```
-docker/
+services/
 ├── Dockerfile.qdrant    # Standalone Qdrant image with baked-in vector storage
 ├── Dockerfile.sast      # Standalone SAST image with Jina-1.5B, NVD index & GPU support
 ├── Dockerfile.sca       # Standalone SCA image with SQLite OSV database (305k records)
+├── Dockerfile.ui        # Standalone Web Cockpit UI & OCR runner container
 ├── docker-compose.yml   # Multi-service production compose configuration
 ├── clean.sh             # Dedicated cleanup: removes all containers, images, and frees disk space
-├── deploy.sh            # Builds and launches the 3 containers on production ports
+├── deploy.sh            # Builds and launches the containers on production ports
 ├── down.sh              # Stops all running Codechecker containers
-├── verify.sh            # 7-point health & functional test suite for the running APIs
+├── verify.sh            # 8-point health & functional test suite for the running APIs & GUI
 ├── export_images.sh     # Bundles built images for 100% offline deployment on other machines
 └── README.md            # This documentation
 ```
