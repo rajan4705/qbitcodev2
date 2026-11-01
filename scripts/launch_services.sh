@@ -67,3 +67,4 @@ done
 
 echo ""
 bash "$SERVICES_DIR/verify.sh"
+
