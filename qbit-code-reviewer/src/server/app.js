@@ -130,7 +130,7 @@ export function createApp() {
   app.post('/api/vllm/switch', async (req, res) => {
     const { variant } = req.body;
     if (!variant) {
-      return res.status(400).json({ error: 'Missing model variant (14b or 30b)' });
+      return res.status(400).json({ error: 'Missing model variant (7b, 14b or 30b)' });
     }
     try {
       const result = await switchModel(variant);

@@ -1447,8 +1447,8 @@ export default function App() {
               onChange={(e) => handleSwitchModel(e.target.value)}
               style={{
                 background: '#090d16',
-                color: activeModelVariant === '14b' ? '#00f0ff' : '#d8b4fe',
-                border: activeModelVariant === '14b' ? '1px solid rgba(0, 240, 255, 0.4)' : '1px solid rgba(168, 85, 247, 0.4)',
+                color: activeModelVariant === '7b' ? '#38bdf8' : activeModelVariant === '14b' ? '#00f0ff' : '#d8b4fe',
+                border: activeModelVariant === '7b' ? '1px solid rgba(56, 189, 248, 0.4)' : activeModelVariant === '14b' ? '1px solid rgba(0, 240, 255, 0.4)' : '1px solid rgba(168, 85, 247, 0.4)',
                 borderRadius: '4px',
                 padding: '3px 8px',
                 fontSize: '0.73rem',
@@ -1462,13 +1462,13 @@ export default function App() {
                   <option 
                     key={m.id} 
                     value={m.id} 
-                    disabled={!m.isDownloaded}
-                    style={{ background: '#0f172a', color: m.isDownloaded ? '#f1f5f9' : '#64748b' }}>
+                    style={{ background: '#0f172a', color: m.isDownloaded ? '#f1f5f9' : '#94a3b8' }}>
                     {m.id.toUpperCase()} — {m.badge} {!m.isDownloaded ? '(not downloaded)' : ''}
                   </option>
                 ))
               ) : (
                 <>
+                  <option value="7b">7B — LIGHTWEIGHT RUNNER (8x)</option>
                   <option value="14b">14B — FAST BUG HUNTER (8x)</option>
                   <option value="30b">30B — DEEP FIXER (4x)</option>
                 </>

@@ -28,7 +28,13 @@ echo "========================================================"
 
 mkdir -p "$DEST_DIR"
 
-/home/minakshi.katoch/anaconda3/envs/qwen3_env/bin/python3 -c "
+CONDA_BASE="$(command -v conda >/dev/null 2>&1 && conda info --base 2>/dev/null || echo "/opt/anaconda3")"
+ENV_PYTHON="$CONDA_BASE/envs/qwen3_env/bin/python"
+if [ ! -x "$ENV_PYTHON" ]; then
+    ENV_PYTHON="$(command -v python3 || echo "python3")"
+fi
+
+"$ENV_PYTHON" -c "
 import os
 from huggingface_hub import snapshot_download
 

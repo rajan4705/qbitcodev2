@@ -7,7 +7,9 @@ sleep 4
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [ "$TARGET" = "14b" ]; then
+if [ "$TARGET" = "7b" ]; then
+  "$SCRIPT_DIR/start_vllm_7b.sh" 8000
+elif [ "$TARGET" = "14b" ]; then
   "$SCRIPT_DIR/start_vllm_14b.sh" 8000
 else
   "$SCRIPT_DIR/start_vllm_qwen3.sh" 8000

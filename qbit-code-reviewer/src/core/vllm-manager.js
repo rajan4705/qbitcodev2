@@ -5,10 +5,27 @@ import { config, saveConfig } from './config.js';
 
 const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname);
 const WORKSPACE_ROOT = path.resolve(SCRIPT_DIR, '../../../');
-const MODELS_BASE = path.join(WORKSPACE_ROOT, 'models');
-const PORT = 8000;
+const MODELS_BASE = process.env.MODELS_DIR || (
+  fs.existsSync(path.join(WORKSPACE_ROOT, 'models'))
+    ? path.join(WORKSPACE_ROOT, 'models')
+    : path.resolve(process.cwd(), 'models')
+);
+const PORT = parseInt(process.env.VLLM_PORT || '8000', 10);
 
 export const MODEL_PROFILES = {
+  '7b': {
+    id: '7b',
+    name: 'Qwen2.5-Coder-7B-Instruct',
+    servedModelName: 'qwen2.5-coder-7b-instruct',
+    path: path.join(MODELS_BASE, 'qwen2.5-coder-7b-instruct'),
+    toolCallParser: 'hermes',
+    maxModelLen: 32768,
+    gpuMemoryUtilization: 0.65,
+    kvCacheDtype: 'auto',
+    recommendedConcurrency: 8,
+    badge: 'LIGHTWEIGHT RUNNER (8x)',
+    description: 'Fast, efficient 7B coder model optimized for single GPU and consumer setups.'
+  },
   '14b': {
     id: '14b',
     name: 'Qwen2.5-Coder-14B-Instruct',
@@ -45,15 +62,17 @@ export async function getModelStatus() {
   let activeServedModel = null;
   let isHealthy = false;
 
+  const vllmBase = (process.env.VLLM_URL || config.vllmUrl || `http://127.0.0.1:${PORT}/v1`).replace(/\/v1\/?$/, '');
+
   try {
-    const res = await fetch(`http://127.0.0.1:${PORT}/v1/models`, { signal: AbortSignal.timeout(1500) });
+    const res = await fetch(`${vllmBase}/v1/models`, { signal: AbortSignal.timeout(1500) });
     if (res.ok) {
       const data = await res.json();
       if (data && data.data && data.data.length > 0) {
         activeServedModel = data.data[0].id;
       }
     }
-    const healthRes = await fetch(`http://127.0.0.1:${PORT}/health`, { signal: AbortSignal.timeout(1500) });
+    const healthRes = await fetch(`${vllmBase}/health`, { signal: AbortSignal.timeout(1500) });
     isHealthy = healthRes.ok;
   } catch {}
 
@@ -75,7 +94,7 @@ export async function getModelStatus() {
     });
   }
 
-  const activeProfile = models.find(m => m.isActive) || MODEL_PROFILES['30b'];
+  const activeProfile = models.find(m => m.isActive) || models.find(m => m.isDownloaded) || MODEL_PROFILES['7b'];
 
   return {
     isHealthy,
@@ -92,7 +111,7 @@ export async function getModelStatus() {
 export async function switchModel(variant, onLog = console.log) {
   const profile = MODEL_PROFILES[variant];
   if (!profile) {
-    throw new Error(`Unknown model variant: "${variant}". Available variants: 14b, 30b`);
+    throw new Error(`Unknown model variant: "${variant}". Available variants: 7b, 14b, 30b`);
   }
 
   if (!fs.existsSync(profile.path)) {
