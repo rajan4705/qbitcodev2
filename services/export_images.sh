@@ -124,7 +124,29 @@ fi
 
 echo "✓ All container images loaded successfully!"
 echo "Starting production Docker Compose stack..."
-$DOCKER_CMD compose -f docker-compose.yml up -d || ./deploy.sh
+
+EXTRA_PROFILES=""
+if [ -f vllm-openai.tar.gz ]; then
+  if [ -z "$MODEL_PATH" ]; then
+    if [ -d "../models/qwen2.5-coder-14b-instruct" ]; then
+      export MODEL_PATH="../models/qwen2.5-coder-14b-instruct"
+    elif [ -d "./models/qwen2.5-coder-14b-instruct" ]; then
+      export MODEL_PATH="./models/qwen2.5-coder-14b-instruct"
+    elif [ -d "../models" ]; then
+      FIRST_M=$(find ../models -mindepth 1 -maxdepth 1 -type d | head -n 1 || true)
+      if [ -n "$FIRST_M" ]; then export MODEL_PATH="$FIRST_M"; fi
+    fi
+  fi
+  if [ -n "$MODEL_PATH" ] && [ -d "$MODEL_PATH" ]; then
+    echo "  • Detected model directory at: $MODEL_PATH"
+    EXTRA_PROFILES="--profile vllm"
+  else
+    echo "  ℹ️  vLLM image loaded. To launch vLLM container, provide your model path:"
+    echo "      MODEL_PATH=/path/to/weights $DOCKER_CMD compose --profile vllm up -d"
+  fi
+fi
+
+$DOCKER_CMD compose -f docker-compose.yml $EXTRA_PROFILES up -d || ./deploy.sh
 EOF
 
 chmod +x "$OUTPUT_DIR/load_and_run.sh"
