@@ -8,6 +8,23 @@ import { SessionManager } from './session-manager.js';
 import { ScanCache } from './scan-cache.js';
 import { enrichFindings } from './cve-enricher.js';
 
+let activeOcrProcess = null;
+
+export function stopActiveScan() {
+  if (activeOcrProcess) {
+    try {
+      const p = activeOcrProcess;
+      p.kill('SIGTERM');
+      setTimeout(() => {
+        try { p.kill('SIGKILL'); } catch {}
+      }, 500);
+      activeOcrProcess = null;
+      return true;
+    } catch {}
+  }
+  return false;
+}
+
 /**
  * Executes OCR command and returns parsed JSON findings.
  * Captures session ID from output stream, records active session,
@@ -97,6 +114,8 @@ export async function runOcrCommand(subcommand, args = [], cwd = process.cwd(), 
       }
     });
 
+    activeOcrProcess = proc;
+
     let timer = null;
     if (timeoutMs > 0) {
       timer = setTimeout(() => {
@@ -149,6 +168,7 @@ export async function runOcrCommand(subcommand, args = [], cwd = process.cwd(), 
     });
 
     proc.on('close', async (code) => {
+      activeOcrProcess = null;
       if (timer) clearTimeout(timer);
       let rawJson = null;
 

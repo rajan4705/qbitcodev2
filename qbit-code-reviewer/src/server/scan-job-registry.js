@@ -134,6 +134,29 @@ export class ScanJobRegistry extends EventEmitter {
     return job;
   }
 
+  abortJob(jobId = this.activeJobId) {
+    if (!jobId) return false;
+    const job = this.jobs.get(jobId);
+    if (!job) return false;
+    if (job.status === 'running' || job.status === 'pending') {
+      job.status = 'interrupted';
+      job.completedAt = Date.now();
+      this.emitToJob(job, 'log', { message: '🛑 [SCAN STOPPED] Scan cancelled by user.' });
+      this.emitToJob(job, 'interrupted', {
+        jobId: job.id,
+        sessionId: job.sessionId,
+        findings: job.findings,
+        summary: job.summary
+      });
+      if (this.activeJobId === job.id) {
+        this.activeJobId = null;
+      }
+      this.persistJob(job);
+      return true;
+    }
+    return false;
+  }
+
   emitToJob(job, event, data) {
     const payload = { event, data, timestamp: Date.now() };
 

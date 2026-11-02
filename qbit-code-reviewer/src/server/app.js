@@ -7,7 +7,7 @@ import { exec, spawnSync } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { config, saveConfig } from '../core/config.js';
-import { runScan, runReview } from '../core/ocr-runner.js';
+import { runScan, runReview, stopActiveScan } from '../core/ocr-runner.js';
 import { applyFixWithOpenCode } from '../core/opencode-runner.js';
 import { streamChatWithVllm } from '../core/vllm-client.js';
 import { enrichFindings, enrichFinding } from '../core/cve-enricher.js';
@@ -628,6 +628,20 @@ else:
 
     // Attach SSE stream to the client (if client disconnects, scan continues running)
     scanRegistry.attachSSE(job.id, res, req);
+  });
+
+  // Stop / Cancel active background scan job
+  app.post('/api/scan/stop', (req, res) => {
+    stopActiveScan();
+    // Also kill any orphan ocr scan process
+    try {
+      exec('pkill -f "ocr scan"');
+    } catch {}
+    const active = scanRegistry.getActiveJob();
+    if (active) {
+      scanRegistry.abortJob(active.id);
+    }
+    res.json({ ok: true, stopped: true });
   });
 
   // Run git diff review (Streaming logs via SSE)

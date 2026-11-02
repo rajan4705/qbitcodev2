@@ -7,6 +7,7 @@ import {
   MessageSquare, 
   Zap, 
   Search, 
+  X, 
   RefreshCw, 
   Send, 
   Code2,
@@ -822,6 +823,22 @@ export default function App() {
       }));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStopScan = async () => {
+    try {
+      await fetch('/api/scan/stop', { method: 'POST' });
+      setLoading(false);
+      setLogs(prev => ({
+        ...prev,
+        scan: [
+          ...prev.scan,
+          `[${new Date().toLocaleTimeString()}] 🛑 Scan aborted by user.`
+        ]
+      }));
+    } catch (e: any) {
+      console.error('Failed to stop scan:', e);
     }
   };
 
@@ -1920,20 +1937,45 @@ export default function App() {
               padding: '8px 18px',
               borderRadius: '6px',
               border: 'none',
-              background: 'linear-gradient(135deg, #0070f3, #00f0ff)',
+              background: loading ? 'rgba(0, 112, 243, 0.4)' : 'linear-gradient(135deg, #0070f3, #00f0ff)',
               color: '#000',
-              cursor: 'pointer',
+              cursor: loading ? 'default' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
               fontSize: '0.85rem',
               fontWeight: 800,
               fontFamily: 'Orbitron, sans-serif',
-              boxShadow: '0 0 20px rgba(0, 240, 255, 0.5)'
+              boxShadow: loading ? 'none' : '0 0 20px rgba(0, 240, 255, 0.5)'
             }}>
             <Search size={14} />
             {loading ? 'SWEEPING...' : 'FULL SCAN'}
           </button>
+
+          {/* Stop Scan Button when active */}
+          {loading && (
+            <button 
+              onClick={handleStopScan}
+              title="Abort the current running scan"
+              style={{
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: '1px solid rgba(239, 68, 68, 0.6)',
+                background: 'rgba(239, 68, 68, 0.2)',
+                color: '#f87171',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                fontFamily: 'Orbitron, sans-serif',
+                boxShadow: '0 0 15px rgba(239, 68, 68, 0.4)'
+              }}>
+              <X size={14} />
+              STOP
+            </button>
+          )}
         </div>
       </header>
 
