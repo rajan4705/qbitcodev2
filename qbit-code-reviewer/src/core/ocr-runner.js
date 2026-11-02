@@ -108,6 +108,7 @@ export async function runOcrCommand(subcommand, args = [], cwd = process.cwd(), 
         OCR_LLM_URL: vllmBase,
         OCR_LLM_TOKEN: config.apiKey || 'token',
         OCR_LLM_MODEL: activeServedModel,
+        OCR_LLM_TEMPERATURE: process.env.OCR_LLM_TEMPERATURE || '0.1',
         OPENAI_BASE_URL: vllmBase,
         OPENAI_API_KEY: config.apiKey || 'token',
         PATH: `${path.dirname(config.ocrPath)}:${process.env.PATH || ''}`
@@ -312,13 +313,14 @@ export async function runScan({ targetDir = process.cwd(), pathFilter = '', excl
   // Dynamically resolve concurrency and model from active profile or config
   const activeConcurrency = String(concurrency || config.concurrency || (config.model && config.model.includes('14b') ? 8 : 4));
   const activeModel = config.model || (parseInt(activeConcurrency, 10) >= 8 ? 'qwen2.5-coder-14b-instruct' : 'qwen3-coder-30b-a3b-instruct');
+  const promptCeiling = process.env.MAX_TOKENS || (activeModel.includes('14b') || activeModel.includes('30b') || activeModel.includes('32b') ? '32000' : '16000');
 
-  const args = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '3', '--max-tokens', '16000'];
+  const args = ['--concurrency', activeConcurrency, '--no-plan', '--no-summary', '--no-dedup', '--max-tools', '3', '--max-tokens', promptCeiling];
   if (activeModel) {
     args.push('--model', activeModel);
   }
   if (minSeverity === 'high' || minSeverity === 'critical') {
-    args.push('--background', 'Strict Audit Directive: Identify and report ONLY vulnerabilities with CRITICAL or HIGH severity (e.g. Remote Code Execution, Memory Corruption, Authentication Bypass, Injection, Privilege Escalation). Completely ignore medium, low, informational, and style issues. If no critical or high severity vulnerabilities exist in the file, call task_done: <task_done>{"state":"DONE"}</task_done>');
+    args.push('--background', 'Strict Security Audit Directive: Focus strictly on identifying and reporting real CRITICAL and HIGH severity security vulnerabilities (such as Buffer Overflow, Remote Code Execution, Command Injection, Use-After-Free, SQL Injection, Authentication/Authorization Bypass). Report all discovered vulnerabilities using code_comment.');
   }
   if (resumeSessionId) {
     args.push('--resume', resumeSessionId);
@@ -337,12 +339,12 @@ export async function runScan({ targetDir = process.cwd(), pathFilter = '', excl
     if (typeof onProgress === 'function') {
       onProgress(`⚠️ Previous session scope did not match current scan. Starting fresh scan without checkpoint...\n`);
     }
-    const cleanArgs = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '3', '--max-tokens', '16000'];
+    const cleanArgs = ['--concurrency', activeConcurrency, '--no-plan', '--no-summary', '--no-dedup', '--max-tools', '3', '--max-tokens', promptCeiling];
     if (activeModel) {
       cleanArgs.push('--model', activeModel);
     }
     if (minSeverity === 'high' || minSeverity === 'critical') {
-      cleanArgs.push('--background', 'Strict Audit Directive: Identify and report ONLY vulnerabilities with CRITICAL or HIGH severity (e.g. Remote Code Execution, Memory Corruption, Authentication Bypass, Injection, Privilege Escalation). Completely ignore medium, low, informational, and style issues. If no critical or high severity vulnerabilities exist in the file, call task_done: <task_done>{"state":"DONE"}</task_done>');
+      cleanArgs.push('--background', 'Strict Security Audit Directive: Focus strictly on identifying and reporting real CRITICAL and HIGH severity security vulnerabilities (such as Buffer Overflow, Remote Code Execution, Command Injection, Use-After-Free, SQL Injection, Authentication/Authorization Bypass). Report all discovered vulnerabilities using code_comment.');
     }
     if (pathFilter) {
       cleanArgs.push('--path', pathFilter);

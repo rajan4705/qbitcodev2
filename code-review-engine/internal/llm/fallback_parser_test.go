@@ -59,6 +59,24 @@ func TestExtractFallbackToolCalls(t *testing.T) {
 			wantName:     "code_comment",
 			wantMinCalls: 1,
 		},
+		{
+			name: "Markdown findings with task_done fence at the end",
+			content: "Let's review the code:\n\n### Finding 1: Stack Buffer Overflow\n**Location**:\n```c\nstrcpy(buf, input);\n```\n**Severity**: High\n**Description**: Unbounded copy.\n\n### Finding 2: Command Injection\n```c\nsystem(cmd);\n```\n**Severity**: Critical\n\nCalling `task_done` to complete.\n```json\n{\n  \"name\": \"task_done\",\n  \"arguments\": {\"comment\": \"DONE\"}\n}\n```",
+			wantName:     "code_comment",
+			wantMinCalls: 1,
+		},
+		{
+			name: "Session 84cc68cf malformed JSON with semicolons and braces in C code",
+			content: "```json\n{\n  \"name\": \"code_comment\",\n  \"arguments\": {\n    \"comments\": [\n       {\n           \"comment\": \"Critical Stack Buffer Overflow (CWE-120)\",\n           \"existing_code\": \"void process_user_input(const char *user_payload) {\\n    char stack_buffer[64];\\n    strcpy(stack_buffer, user_payload);\\n}\",\n           \"category\": \"security\",\n           \"severity\": \"critical\",\n           \"path\": \"<current_file_path>\"\n       },\n       {\n           \"comment\": \"Critical Remote file Injection (CWE-78)\";\n           \"existingcode\": \"int execute_system_command(const char *domain_name) {\\n    system(command_buffer);\\n}\",\n           \"category\": \"security\",\n           \"severity\": \"critical\",\n           \"path\": \"<current_file_path>\"\n       }\n     ]\n   }\n}\n}\n```",
+			wantName:     "code_comment",
+			wantMinCalls: 1,
+		},
+		{
+			name: "Session 14be6cdc function: code_comment with invalid escape in string",
+			content: "```json\n{\n  \"function\": \"code_comment\",\n  \"arguments\": {\n    \"comments\": [\n       {\n           \"comment\": \"Critical Stack Buffer Overflow (CWE-120)\",\n           \"existing_code\": \"void process_user_input(const char *user_payload) {\\n    strcpy(stack_buffer, user_payload);\\n}\",\n           \"category\": \"security\",\n           \"severity\": \"critical\",\n           \"path\": \"<current_file_path>\"\n       }\n     ]\n   }\n}\n```",
+			wantName:     "code_comment",
+			wantMinCalls: 1,
+		},
 	}
 
 	for _, tt := range tests {

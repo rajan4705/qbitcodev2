@@ -452,14 +452,27 @@ func (r *Runner) RunMainTask(ctx context.Context, messages []llm.Message, taskKe
 		calls := resp.ToolCalls()
 
 		if len(calls) == 0 {
-			fmt.Fprintf(stdout.Writer(), "[ocr] No tool calls parsed for %s, retrying...\n", taskKey)
-			messages = append(messages, llm.NewTextMessage("user", "You did not successfully call any tools. Please try again or use task_done if finished."))
-			native := resp.Native()
-			reasoning := resp.ReasoningContent()
-			if content != "" || native.Payload != nil || reasoning != "" {
-				messages = append(messages[:len(messages)-1], llm.NewToolCallMessage(content, nil, native, reasoning), messages[len(messages)-1])
+			// If the model already produced conversational review text or if this is a retry round,
+			// gracefully treat as task completion so we never loop or spam retries
+			if len(messages) > 2 || len(content) > 0 || resp.ReasoningContent() != "" {
+				calls = []llm.ToolCall{{
+					ID:   fmt.Sprintf("fallback_task_done_%d", time.Now().UnixNano()),
+					Type: "function",
+					Function: llm.FunctionCall{
+						Name:      "task_done",
+						Arguments: `{"state":"DONE"}`,
+					},
+				}}
+			} else {
+				fmt.Fprintf(stdout.Writer(), "[ocr] No tool calls parsed for %s, retrying...\n", taskKey)
+				messages = append(messages, llm.NewTextMessage("user", "You did not successfully call any tools. Please try again or use task_done if finished."))
+				native := resp.Native()
+				reasoning := resp.ReasoningContent()
+				if content != "" || native.Payload != nil || reasoning != "" {
+					messages = append(messages[:len(messages)-1], llm.NewToolCallMessage(content, nil, native, reasoning), messages[len(messages)-1])
+				}
+				continue
 			}
-			continue
 		}
 
 		var results []tool.ToolCallResult
@@ -711,6 +724,12 @@ func (r *Runner) executeToolCall(ctx context.Context, taskKey string, call llm.T
 				var d *model.Diff
 				if r.deps.DiffLookup != nil {
 					d = r.deps.DiffLookup(cm.Path)
+					if d == nil && taskKey != "" {
+						d = r.deps.DiffLookup(taskKey)
+						if d != nil {
+							cm.Path = taskKey
+						}
+					}
 				}
 				// Resolution order: the comment's own file, then a cross-file
 				// search, then the LLM. The cross-file search precedes the LLM

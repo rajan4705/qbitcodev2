@@ -18,6 +18,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -365,8 +366,11 @@ func (r *ChatResponse) ToolCalls() []ToolCall {
 	if len(r.Choices[0].Message.ToolCalls) > 0 {
 		return r.Choices[0].Message.ToolCalls
 	}
-	// Fallback: extract narrated tool calls from text content
+	// Fallback: extract narrated tool calls from text content or reasoning
 	content := r.VisibleContent()
+	if content == "" {
+		content = r.ReasoningContent()
+	}
 	if content != "" {
 		fallbackCalls := ExtractFallbackToolCalls(content)
 		if len(fallbackCalls) > 0 {
@@ -955,6 +959,10 @@ func (c *OpenAIClient) buildOpenAIParams(model string, req ChatRequest) openai.C
 	}
 	if req.Temperature != nil {
 		params.Temperature = openai.Float(*req.Temperature)
+	} else if tempEnv := os.Getenv("OCR_LLM_TEMPERATURE"); tempEnv != "" {
+		if tVal, err := strconv.ParseFloat(tempEnv, 64); err == nil {
+			params.Temperature = openai.Float(tVal)
+		}
 	}
 
 	return params
@@ -1522,6 +1530,24 @@ func (c *AnthropicClient) CompletionsWithCtx(ctx context.Context, req ChatReques
 
 	sdkResp, err := c.sdk.Messages.New(ctx, params, opts...)
 	if err != nil {
+		errStr := err.Error()
+		if strings.Contains(errStr, "maximum context length") && strings.Contains(errStr, "parameter=input_tokens") {
+			var maxCtx, reqOut, inTokens int64
+			idx := strings.Index(errStr, "maximum context length is ")
+			if idx >= 0 {
+				n, _ := fmt.Sscanf(errStr[idx:], "maximum context length is %d tokens. However, you requested %d output tokens and your prompt contains at least %d", &maxCtx, &reqOut, &inTokens)
+				if n == 3 && maxCtx > inTokens {
+					avail := maxCtx - inTokens - 32
+					if avail > 64 {
+						params.MaxTokens = avail
+						sdkResp, retryErr := c.sdk.Messages.New(ctx, params, opts...)
+						if retryErr == nil {
+							return c.mapAnthropicResponse(sdkResp), nil
+						}
+					}
+				}
+			}
+		}
 		return nil, c.explainError(model, err)
 	}
 
@@ -1628,7 +1654,7 @@ func (c *AnthropicClient) buildAnthropicParams(model string, req ChatRequest) (a
 
 	maxTokens := int64(req.MaxTokens)
 	if maxTokens <= 0 {
-		maxTokens = defaultAnthropicMaxTokens
+		maxTokens = 8192
 	}
 
 	params := anthropic.MessageNewParams{
@@ -1668,6 +1694,10 @@ func (c *AnthropicClient) buildAnthropicParams(model string, req ChatRequest) (a
 	}
 	if req.Temperature != nil {
 		params.Temperature = anthropic.Float(*req.Temperature)
+	} else if tempEnv := os.Getenv("OCR_LLM_TEMPERATURE"); tempEnv != "" {
+		if tVal, err := strconv.ParseFloat(tempEnv, 64); err == nil {
+			params.Temperature = anthropic.Float(tVal)
+		}
 	}
 
 	return params, nil

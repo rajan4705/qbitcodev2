@@ -127,15 +127,34 @@ func parseCommentsInner(args map[string]any, defaultPath string) ([]model.LlmCom
 
 		cm := model.LlmComment{}
 
-		if content, ok := obj["content"].(string); ok {
+		if content, ok := obj["content"].(string); ok && content != "" {
 			cm.Content = content
+		} else if comment, ok := obj["comment"].(string); ok && comment != "" {
+			cm.Content = comment
+		} else if desc, ok := obj["description"].(string); ok && desc != "" {
+			cm.Content = desc
+		} else if issue, ok := obj["issue"].(string); ok && issue != "" {
+			cm.Content = issue
+		} else if msg, ok := obj["message"].(string); ok && msg != "" {
+			cm.Content = msg
 		}
-		if suggestion, ok := obj["suggestion_code"].(string); ok {
+
+		if suggestion, ok := obj["suggestion_code"].(string); ok && suggestion != "" {
 			cm.SuggestionCode = suggestion
+		} else if sc, ok := obj["suggested_code"].(string); ok && sc != "" {
+			cm.SuggestionCode = sc
+		} else if sc2, ok := obj["suggestedcode"].(string); ok && sc2 != "" {
+			cm.SuggestionCode = sc2
 		}
-		if existing, ok := obj["existing_code"].(string); ok {
+
+		if existing, ok := obj["existing_code"].(string); ok && existing != "" {
 			cm.ExistingCode = existing
+		} else if ec, ok := obj["existingcode"].(string); ok && ec != "" {
+			cm.ExistingCode = ec
+		} else if code, ok := obj["code"].(string); ok && code != "" {
+			cm.ExistingCode = code
 		}
+
 		if thinking, ok := obj["thinking"].(string); ok {
 			cm.Thinking = thinking
 		}
@@ -148,7 +167,7 @@ func parseCommentsInner(args map[string]any, defaultPath string) ([]model.LlmCom
 		if pathVal, ok := obj["path"].(string); ok && pathVal != "" {
 			cm.Path = normalizeCommentPath(pathVal)
 		}
-		if cm.Path == "" {
+		if cm.Path == "" || strings.Contains(cm.Path, "current_file_path") {
 			cm.Path = normalizeCommentPath(defaultPath)
 		}
 

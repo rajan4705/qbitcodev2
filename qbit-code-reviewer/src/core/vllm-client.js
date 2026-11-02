@@ -1,5 +1,22 @@
 import { config } from './config.js';
 
+let detectedModel = null;
+
+export async function getActiveModel() {
+  if (detectedModel) return detectedModel;
+  try {
+    const res = await fetch(`${config.vllmUrl}/models`, { signal: AbortSignal.timeout(1500) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.data?.[0]?.id) {
+        detectedModel = data.data[0].id;
+        return detectedModel;
+      }
+    }
+  } catch {}
+  return config.model || 'qwen2.5-coder-7b-instruct';
+}
+
 /**
  * Streams a chat completion directly from the local vLLM OpenAI-compatible endpoint.
  * Throws an explicit error if vLLM is down or unreachable.
@@ -10,6 +27,7 @@ export async function* streamChatWithVllm({
   temperature = 0.2,
   maxTokens = 2048
 }) {
+  const model = await getActiveModel();
   const fullMessages = [
     { role: 'system', content: systemPrompt },
     ...messages
@@ -29,7 +47,7 @@ export async function* streamChatWithVllm({
         'Authorization': `Bearer ${config.apiKey}`
       },
       body: JSON.stringify({
-        model: config.model,
+        model,
         messages: fullMessages,
         temperature,
         max_tokens: maxTokens,
@@ -95,6 +113,7 @@ export async function generateCompletionWithVllm({
     ...messages
   ];
 
+  const model = await getActiveModel();
   const endpoint = `${config.vllmUrl}/chat/completions`;
   const res = await fetch(endpoint, {
     method: 'POST',
@@ -103,7 +122,7 @@ export async function generateCompletionWithVllm({
       'Authorization': `Bearer ${config.apiKey}`
     },
     body: JSON.stringify({
-      model: config.model,
+      model,
       messages: fullMessages,
       temperature,
       max_tokens: maxTokens,

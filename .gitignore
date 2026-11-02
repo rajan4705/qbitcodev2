@@ -58,6 +58,7 @@ bin/
 dist/
 build/
 *.tar.gz
+*.tar
 *.zip
 exported_images/
 
