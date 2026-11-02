@@ -694,7 +694,7 @@ export default function App() {
     setScanProgress({ totalFiles: 0, reviewedFiles: 0, skippedFiles: 0, estimatedTokens: '', percent: 0, etaFormatted: '', startTime: Date.now() });
 
     const activeWorkers = activeModelVariant === '14b' ? 8 : 4;
-    const activeModelName = activeModelVariant === '14b' ? 'Qwen2.5-Coder-14B' : 'Qwen3-Coder-30B';
+    const activeModelName = activeModelVariant === '14b' ? 'Qwen2.5-Coder-14B' : (activeModelVariant === '7b' ? 'Qwen2.5-Coder-7B' : 'Qwen3-Coder-30B');
 
     setLogs(prev => ({
       ...prev,

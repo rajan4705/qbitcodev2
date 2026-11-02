@@ -574,13 +574,14 @@ export class ScanJobRegistry extends EventEmitter {
     const listener = (event, data) => {
       sendEvent(event, data);
       if (event === 'complete' || event === 'error' || event === 'interrupted') {
+        job.sseListeners.delete(listener);
         res.end();
       }
     };
 
     job.sseListeners.add(listener);
 
-    req.on('close', () => {
+    res.on('close', () => {
       job.sseListeners.delete(listener);
     });
   }

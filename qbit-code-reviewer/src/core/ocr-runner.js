@@ -293,7 +293,7 @@ export async function runScan({ targetDir = process.cwd(), pathFilter = '', excl
   const activeConcurrency = String(concurrency || config.concurrency || (config.model && config.model.includes('14b') ? 8 : 4));
   const activeModel = config.model || (parseInt(activeConcurrency, 10) >= 8 ? 'qwen2.5-coder-14b-instruct' : 'qwen3-coder-30b-a3b-instruct');
 
-  const args = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '8', '--max-tokens', '32768'];
+  const args = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '8', '--max-tokens', '16000'];
   if (activeModel) {
     args.push('--model', activeModel);
   }
@@ -317,7 +317,7 @@ export async function runScan({ targetDir = process.cwd(), pathFilter = '', excl
     if (typeof onProgress === 'function') {
       onProgress(`⚠️ Previous session scope did not match current scan. Starting fresh scan without checkpoint...\n`);
     }
-    const cleanArgs = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '8', '--max-tokens', '32768'];
+    const cleanArgs = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '8', '--max-tokens', '16000'];
     if (activeModel) {
       cleanArgs.push('--model', activeModel);
     }
