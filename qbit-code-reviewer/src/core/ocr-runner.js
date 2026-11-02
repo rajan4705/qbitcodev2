@@ -293,12 +293,12 @@ export async function runScan({ targetDir = process.cwd(), pathFilter = '', excl
   const activeConcurrency = String(concurrency || config.concurrency || (config.model && config.model.includes('14b') ? 8 : 4));
   const activeModel = config.model || (parseInt(activeConcurrency, 10) >= 8 ? 'qwen2.5-coder-14b-instruct' : 'qwen3-coder-30b-a3b-instruct');
 
-  const args = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '8', '--max-tokens', '16000'];
+  const args = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '3', '--max-tokens', '16000'];
   if (activeModel) {
     args.push('--model', activeModel);
   }
   if (minSeverity === 'high' || minSeverity === 'critical') {
-    args.push('--background', 'Strict Audit Directive: Identify and report ONLY vulnerabilities with CRITICAL or HIGH severity (e.g. Remote Code Execution, Memory Corruption, Authentication Bypass, Injection, Privilege Escalation). Completely ignore medium, low, informational, and style issues.');
+    args.push('--background', 'Strict Audit Directive: Identify and report ONLY vulnerabilities with CRITICAL or HIGH severity (e.g. Remote Code Execution, Memory Corruption, Authentication Bypass, Injection, Privilege Escalation). Completely ignore medium, low, informational, and style issues. If no critical or high severity vulnerabilities exist in the file, call task_done: <task_done>{"state":"DONE"}</task_done>');
   }
   if (resumeSessionId) {
     args.push('--resume', resumeSessionId);
@@ -317,12 +317,12 @@ export async function runScan({ targetDir = process.cwd(), pathFilter = '', excl
     if (typeof onProgress === 'function') {
       onProgress(`⚠️ Previous session scope did not match current scan. Starting fresh scan without checkpoint...\n`);
     }
-    const cleanArgs = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '8', '--max-tokens', '16000'];
+    const cleanArgs = ['--concurrency', activeConcurrency, '--no-plan', '--max-tools', '3', '--max-tokens', '16000'];
     if (activeModel) {
       cleanArgs.push('--model', activeModel);
     }
     if (minSeverity === 'high' || minSeverity === 'critical') {
-      cleanArgs.push('--background', 'Strict Audit Directive: Identify and report ONLY vulnerabilities with CRITICAL or HIGH severity (e.g. Remote Code Execution, Memory Corruption, Authentication Bypass, Injection, Privilege Escalation). Completely ignore medium, low, informational, and style issues.');
+      cleanArgs.push('--background', 'Strict Audit Directive: Identify and report ONLY vulnerabilities with CRITICAL or HIGH severity (e.g. Remote Code Execution, Memory Corruption, Authentication Bypass, Injection, Privilege Escalation). Completely ignore medium, low, informational, and style issues. If no critical or high severity vulnerabilities exist in the file, call task_done: <task_done>{"state":"DONE"}</task_done>');
     }
     if (pathFilter) {
       cleanArgs.push('--path', pathFilter);

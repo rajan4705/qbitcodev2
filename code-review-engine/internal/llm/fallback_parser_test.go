@@ -47,6 +47,18 @@ func TestExtractFallbackToolCalls(t *testing.T) {
 			wantName:     "task_done",
 			wantMinCalls: 1,
 		},
+		{
+			name: "Natural language Task Done",
+			content: "### Final Thoughts\nThere are no critical or high issues identified in this file.\n### Task Done\nNo further issues were identified in this file. Moving on.",
+			wantName:     "task_done",
+			wantMinCalls: 1,
+		},
+		{
+			name: "Function current_comment alias",
+			content: "```json\n{\n  \"function\": \"current_comment\",\n  \"arguments\": {\n    \"comments\": [{\"content\": \"Leak\", \"existing_code\": \"malloc()\"}]\n  }\n}\n```",
+			wantName:     "code_comment",
+			wantMinCalls: 1,
+		},
 	}
 
 	for _, tt := range tests {

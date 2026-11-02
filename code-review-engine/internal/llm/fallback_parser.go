@@ -33,6 +33,12 @@ func ExtractFallbackToolCalls(content string) []ToolCall {
 			var raw map[string]any
 			if err := json.Unmarshal([]byte(body), &raw); err == nil {
 				name, _ := raw["name"].(string)
+				if name == "" {
+					name, _ = raw["function"].(string)
+				}
+				if name == "current_comment" {
+					name = "code_comment"
+				}
 				if name != "" {
 					argsStr := "{}"
 					if argsObj, ok := raw["arguments"]; ok {
@@ -41,6 +47,7 @@ func ExtractFallbackToolCalls(content string) []ToolCall {
 						}
 					} else {
 						delete(raw, "name")
+						delete(raw, "function")
 						if b, err := json.Marshal(raw); err == nil {
 							argsStr = string(b)
 						}
@@ -125,6 +132,12 @@ func ExtractFallbackToolCalls(content string) []ToolCall {
 		var raw map[string]any
 		if err := json.Unmarshal([]byte(rawJSON), &raw); err == nil {
 			name, _ := raw["name"].(string)
+			if name == "" {
+				name, _ = raw["function"].(string)
+			}
+			if name == "current_comment" {
+				name = "code_comment"
+			}
 			if name != "" {
 				id := fmt.Sprintf("fallback_call_fence_%d_%d", time.Now().UnixNano(), i)
 				argsStr := "{}"
@@ -134,6 +147,7 @@ func ExtractFallbackToolCalls(content string) []ToolCall {
 					}
 				} else {
 					delete(raw, "name")
+					delete(raw, "function")
 					if b, err := json.Marshal(raw); err == nil {
 						argsStr = string(b)
 					}
@@ -160,6 +174,12 @@ func ExtractFallbackToolCalls(content string) []ToolCall {
 		var raw map[string]any
 		if err := json.Unmarshal([]byte(trimmed), &raw); err == nil {
 			name, _ := raw["name"].(string)
+			if name == "" {
+				name, _ = raw["function"].(string)
+			}
+			if name == "current_comment" {
+				name = "code_comment"
+			}
 			if name != "" {
 				id := fmt.Sprintf("fallback_call_raw_%d", time.Now().UnixNano())
 				argsStr := "{}"
@@ -169,6 +189,7 @@ func ExtractFallbackToolCalls(content string) []ToolCall {
 					}
 				} else {
 					delete(raw, "name")
+					delete(raw, "function")
 					if b, err := json.Marshal(raw); err == nil {
 						argsStr = string(b)
 					}
@@ -183,6 +204,31 @@ func ExtractFallbackToolCalls(content string) []ToolCall {
 				})
 			}
 		}
+	}
+
+	if len(calls) > 0 {
+		return calls
+	}
+
+	// 4. Natural language review completion detection (e.g. Qwen writing "Task Done" or "no issues identified")
+	lower := strings.ToLower(cleanContent)
+	if strings.Contains(lower, "task_done") ||
+		strings.Contains(lower, "task done") ||
+		strings.Contains(lower, "no critical or high") ||
+		strings.Contains(lower, "no issues identified") ||
+		strings.Contains(lower, "no further issues") ||
+		strings.Contains(lower, "no vulnerabilities") ||
+		strings.Contains(lower, "review is complete") ||
+		strings.Contains(lower, "no defects identified") ||
+		strings.Contains(lower, "code looks good") {
+		calls = append(calls, ToolCall{
+			ID:   fmt.Sprintf("fallback_task_done_%d", time.Now().UnixNano()),
+			Type: "function",
+			Function: FunctionCall{
+				Name:      "task_done",
+				Arguments: `{"state":"DONE"}`,
+			},
+		})
 	}
 
 	return calls
